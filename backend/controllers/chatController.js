@@ -3,7 +3,7 @@ const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const fs = require("fs");
 const path = require("path");
-const { uploadToCloudinary } = require("../utils/cloudinary");
+const { uploadToCloudinary, deleteFromCloudinary } = require("../utils/cloudinary");
 
 const getConversations = async (req, res) => {
     try {
@@ -138,7 +138,7 @@ const sendMessage = async (req, res) => {
                 resourceType = "raw";
             }
             // Upload to Cloudinary
-            const result = await uploadToCloudinary(file.buffer, "chat_media", resourceType);
+            const result = await uploadToCloudinary(file.buffer, "chat_media", resourceType, file.mimetype);
             const mediaUrl = result.secure_url;
 
 
@@ -167,7 +167,7 @@ const sendMessage = async (req, res) => {
             if (io) {
                 if (conversation.isGroup) {
                     createdMessages.forEach(msg => {
-                        io.to(`group:${conversation._id}`).emit("receive_group_message", { ...msg.toObject(), conversationId: conversation._id });
+                        io.to(`group:${conversation._id}`).emit("receive_group_message", { ...msg.toJSON(), conversationId: conversation._id });
                     });
                 }
                 conversation.participants.forEach(participantId => {
@@ -232,11 +232,15 @@ const deleteConversation = async (req, res) => {
             "fileTransfer.mediaUrl": { $exists: true }
         });
 
-        messagesWithFiles.forEach(msg => {
-            if (msg.fileTransfer && msg.fileTransfer.mediaUrl && !msg.fileTransfer.mediaUrl.startsWith("http")) {
-                const filePath = path.join(__dirname, "..", msg.fileTransfer.mediaUrl);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
+        messagesWithFiles.forEach(async msg => {
+            if (msg.fileTransfer && msg.fileTransfer.mediaUrl) {
+                if (!msg.fileTransfer.mediaUrl.startsWith("http")) {
+                    const filePath = path.join(__dirname, "..", msg.fileTransfer.mediaUrl);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } else {
+                    await deleteFromCloudinary(msg.fileTransfer.mediaUrl);
                 }
             }
         });
@@ -268,11 +272,15 @@ const clearChat = async (req, res) => {
             "fileTransfer.mediaUrl": { $exists: true }
         });
 
-        messagesWithFiles.forEach(msg => {
-            if (msg.fileTransfer && msg.fileTransfer.mediaUrl && !msg.fileTransfer.mediaUrl.startsWith("http")) {
-                const filePath = path.join(__dirname, "..", msg.fileTransfer.mediaUrl);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath);
+        messagesWithFiles.forEach(async msg => {
+            if (msg.fileTransfer && msg.fileTransfer.mediaUrl) {
+                if (!msg.fileTransfer.mediaUrl.startsWith("http")) {
+                    const filePath = path.join(__dirname, "..", msg.fileTransfer.mediaUrl);
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } else {
+                    await deleteFromCloudinary(msg.fileTransfer.mediaUrl);
                 }
             }
         });
@@ -362,7 +370,7 @@ const createGroup = async (req, res) => {
 
         let groupAvatar = "";
         if (req.file) {
-            const result = await uploadToCloudinary(req.file.buffer, "group_avatars");
+            const result = await uploadToCloudinary(req.file.buffer, "group_avatars", "auto", req.file.mimetype);
             groupAvatar = result.secure_url;
         }
 
@@ -417,7 +425,7 @@ const updateGroupSettings = async (req, res) => {
         if (messagingMode) conversation.messagingMode = messagingMode;
 
         if (groupAvatar) {
-            const result = await uploadToCloudinary(groupAvatar.buffer, "group_avatars");
+            const result = await uploadToCloudinary(groupAvatar.buffer, "group_avatars", "auto", groupAvatar.mimetype);
             conversation.groupAvatar = result.secure_url;
         } else if (removeAvatar === "true") {
             conversation.groupAvatar = "";

@@ -69,8 +69,25 @@ const ProfileInfoPanel = ({
         const handleChatCleared = (data) => {
             if (data.conversationId === conversationId) setSharedFiles([]);
         };
+
+        const handleNewMessage = (msg) => {
+            if (msg.conversationId === conversationId && msg.fileTransfer && msg.fileTransfer.mediaUrl && msg.fileTransfer.status === "complete") {
+                setSharedFiles(prev => {
+                    if (prev.some(m => m._id === msg._id)) return prev;
+                    return [msg, ...prev]; // Latest first
+                });
+            }
+        };
+
         socket.on("chat_cleared", handleChatCleared);
-        return () => socket.off("chat_cleared", handleChatCleared);
+        socket.on("receive_message", handleNewMessage);
+        socket.on("receive_group_message", handleNewMessage);
+
+        return () => {
+            socket.off("chat_cleared", handleChatCleared);
+            socket.off("receive_message", handleNewMessage);
+            socket.off("receive_group_message", handleNewMessage);
+        };
     }, [socket, conversationId]);
 
     const fetchSharedFiles = async () => {

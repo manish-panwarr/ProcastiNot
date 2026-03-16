@@ -158,14 +158,23 @@ const { uploadToCloudinary } = require("../utils/cloudinary");
 const uploadImage = async (req, res) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ message: "No file uploaded" });
+            return res.status(400).json({ message: "No image file provided" });
+        }
+        
+        // Upload the new image to Cloudinary (using memory stream wrapper)
+        const result = await uploadToCloudinary(req.file.buffer, "task-manager-profiles", "auto", req.file.mimetype);
+
+        // Update the user details
+        const user = await User.findById(req.user._id);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
         }
 
-        // Upload to Cloudinary
-        const result = await uploadToCloudinary(req.file.buffer, "profile_pics");
+        user.profileImageUrl = result.secure_url;
+        await user.save();
 
         res.status(200).json({
-            message: "Image uploaded successfully",
+            message: "Profile image updated successfully",
             imageUrl: result.secure_url,
         });
     } catch (error) {

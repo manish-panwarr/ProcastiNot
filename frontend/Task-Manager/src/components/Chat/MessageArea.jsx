@@ -423,7 +423,7 @@ const FileBubble = ({ fileTransfer, isMe, isP2P = false, allImages, imageIndex =
     const category = getFileCategory(fileType, fileName);
     const meta = FILE_META[category] || FILE_META.other;
     const src = mediaUrl
-        ? (mediaUrl.startsWith('http') || mediaUrl.startsWith('data:') ? mediaUrl : `${BASE_URL}${mediaUrl}`)
+        ? (mediaUrl.startsWith('http') || mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:') ? mediaUrl : `${BASE_URL}${mediaUrl}`)
         : null;
 
     const handleDownload = async (e, url, name) => {
