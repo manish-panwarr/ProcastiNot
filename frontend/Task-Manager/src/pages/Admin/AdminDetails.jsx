@@ -20,7 +20,7 @@ const AdminDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const { user } = useContext(UserContext); // Get current logged-in user info
+    const { user } = useContext(UserContext);
     const isManager = user?.role === "manager";
 
     const [loading, setLoading] = useState(true);
@@ -45,13 +45,10 @@ const AdminDetails = () => {
             if (response.data) {
                 setUserData(response.data.user);
                 setAssignedTasks(response.data.tasks || []);
-                // If it's an admin view, we might get adminStats
                 if (response.data.adminStats) {
                     setAdminStats(response.data.adminStats);
                 }
                 setWorkingUnder(response.data.admins || []);
-
-                // Initialize edit form data
                 setEditFormData({
                     name: response.data.user.name,
                     email: response.data.user.email,
@@ -119,8 +116,6 @@ const AdminDetails = () => {
         }
     };
 
-    // Prepare Chart Data
-    // Use adminStats if available, else assignedTasks (for fallback, though backend handles it)
     const getTaskStatusData = () => {
         if (adminStats) {
             return [
@@ -141,7 +136,6 @@ const AdminDetails = () => {
         }));
     };
 
-    // Priority data might not be in adminStats summary, so we use assignedTasks (which are actually CreatedTasks for admins now due to backend change)
     const getTaskPriorityData = () => {
         if (!assignedTasks.length) return [];
         const priorityCounts = { Low: 0, Medium: 0, High: 0 };
@@ -190,7 +184,6 @@ const AdminDetails = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-3">
-                        {/* Only Managers can edit or hold admins */}
                         {isManager && (
                             <>
                                 <button
@@ -319,7 +312,7 @@ const AdminDetails = () => {
                     </div>
                 </div>
 
-                {/* Working Under Section - Hide for admins? Or show helpful info */}
+                {/* Working Under Section - Hide for admins? Or show helpful info , HOLD and wait*/}
                 {!adminStats && (
                     <div className="mb-8">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
@@ -351,7 +344,7 @@ const AdminDetails = () => {
                     </div>
                 )}
 
-                {/* Edit Modal */}
+                {/* Edit Profile */}
                 <Modal
                     isOpen={isEditModalOpen}
                     onClose={() => setIsEditModalOpen(false)}

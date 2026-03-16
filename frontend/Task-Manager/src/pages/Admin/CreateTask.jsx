@@ -147,24 +147,10 @@ const CreateTask = () => {
     formData.append("dueDate", new Date(taskData.dueDate).toISOString());
     formData.append("assignedTo", JSON.stringify(taskData.assignedTo)); // Array of user IDs
 
-    // Correctly map todoChecklist to expected structure {text, completed} before stringifying
+    // Map todoChecklist strings to {text, completed} objects
     const todolist = taskData.todoChecklist?.map((item) => ({
       text: item,
-      completed: false, // Default to false for new/updated items (or preserve?)
-      // Wait, updateTask logic in previous code reset checklist.
-      // Ideally we should preserve completed status if updating?
-      // But CreateTask.jsx only edits taskData.todoChecklist as simple strings array (via TodoListInput).
-      // So completion status is lost on update if TodoListInput doesn't support it.
-      // TodoListInput seems to just manage text list.
-      // So we assume reset to false or handle it better?
-      // Previous code:
-      /*
-       const todolist = taskData.todoChecklist?.map((item) => ({
-        text: item,
-        completed: false,
-      }));
-      */
-      // So previous code reset completion status on update. I will keep same behavior.
+      completed: false,
     }));
 
     formData.append("todoChecklist", JSON.stringify(todolist));
@@ -212,9 +198,8 @@ const CreateTask = () => {
           description: taskInfo.description,
           priority: taskInfo.priority,
           dueDate: taskInfo.dueDate ? moment(taskInfo.dueDate).format("YYYY-MM-DD") : "",
-          assignedTo: taskInfo?.assignedTo?.map((item) => item?._id) || [],
-
-          todoChecklist: taskInfo?.todoChecklist?.map((item) => item?.text) || [],
+          assignedTo: taskInfo?.assignedTo?.map((item) => typeof item === 'object' ? item?._id : item) || [],
+          todoChecklist: taskInfo?.todoChecklist?.map((item) => typeof item === 'object' ? item?.text : item) || [],
           attachments: taskInfo?.attachments || [],
         }));
       }

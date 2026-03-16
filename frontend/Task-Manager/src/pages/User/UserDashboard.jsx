@@ -14,7 +14,7 @@ import TaskListTable from "../../components/layouts/TaskListTable";
 import CustomPieChart from "../../components/Charts/CustomPieChart";
 import CustomBarChart from "../../components/Charts/CustomBarChart";
 import CustomLineChart from "../../components/Charts/CustomLineChart";
-import { addThousandsSeparator } from "../../utils/helper";
+import { addThousandsSeparator, getGreeting } from "../../utils/helper";
 import TaskCard from "../../components/Cards/TaskCard";
 import SelectDropdown from "../../components/inputs/SelectDropdown";
 
@@ -36,9 +36,6 @@ const UserDashboard = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [filterStatus, setFilterStatus] = useState("");
 
-    /* ----------------------------------
-       Prepare Chart Data (SAFE + DEFENSIVE)
-    ----------------------------------- */
     const prepareChartData = (charts) => {
         if (!charts) {
             setPieChartData([]);
@@ -53,7 +50,7 @@ const UserDashboard = () => {
             last7Days = [],
         } = charts;
 
-        // ---- PIE CHART (Task Distribution)
+        // PIE CHART (Task Distribution)
         const pieData = [
             { status: "Pending", count: Number(taskDistribution.Pending) || 0 },
             { status: "In Progress", count: Number(taskDistribution.InProgress) || 0 },
@@ -62,7 +59,7 @@ const UserDashboard = () => {
 
         setPieChartData(pieData);
 
-        // ---- BAR CHART (Priority Levels)
+        // BAR CHART (Priority Levels)
         const barData = [
             { priority: "High", count: Number(taskPriorityLevels.High) || 0 },
             { priority: "Medium", count: Number(taskPriorityLevels.Medium) || 0 },
@@ -73,9 +70,6 @@ const UserDashboard = () => {
         setLineChartData(last7Days);
     };
 
-    /* --------------------------
-       Fetch Dashboard Data
-    --------------------------- */
     const getDashboardData = async () => {
         setLoading(true);
         try {
@@ -118,55 +112,56 @@ const UserDashboard = () => {
     }, []);
 
     const onSeeMore = () => {
-        navigate("/admin/tasks"); // Or navigate to /my-tasks for users?
+        navigate("/user/tasks");
     };
 
     const handleRecentTaskClick = (task) => {
-        navigate(`/task/${task._id}`);
-    }
+        navigate(`/user/task-details/${task._id}`);
+    };
 
     return (
         <DashboardLayout activeMenu="Dashboard">
-            {/* Header */}
-            <div className="card my-5">
-                <h2 className="text-xl md:text-2xl">
-                    Good Morning! {user?.name}
-                </h2>
-                <p className="text-xs md:text-[13px] text-gray-400 mt-1.5">
-                    {moment().format("dddd Do MMM YYYY")}
-                </p>
-
-                {/* Info Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                    <InfoCard
-                        label="Total Tasks"
-                        value={addThousandsSeparator(
-                            dashboardData?.charts?.taskDistribution?.All || 0
-                        )}
-                        color="bg-primary"
-                    />
-                    <InfoCard
-                        label="Pending Tasks"
-                        value={addThousandsSeparator(
-                            dashboardData?.charts?.taskDistribution?.Pending || 0
-                        )}
-                        color="bg-amber-500"
-                    />
-                    <InfoCard
-                        label="In Progress Tasks"
-                        value={addThousandsSeparator(
-                            dashboardData?.charts?.taskDistribution?.InProgress || 0
-                        )}
-                        color="bg-cyan-500"
-                    />
-                    <InfoCard
-                        label="Completed Tasks"
-                        value={addThousandsSeparator(
-                            dashboardData?.charts?.taskDistribution?.Completed || 0
-                        )}
-                        color="bg-lime-500"
-                    />
+            {/* Headers */}
+            <div className="bg-white rounded-2xl p-6 md:p-8 mb-6 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-md">
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
+                        {getGreeting()}, <span className="text-primary">{user?.name}</span> 👋
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-500 font-medium">
+                        {moment().format("dddd, MMMM Do YYYY")}
+                    </p>
                 </div>
+            </div>
+
+            {/* Info Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+                <InfoCard
+                    label="Total Tasks"
+                    value={addThousandsSeparator(
+                        dashboardData?.charts?.taskDistribution?.All || 0
+                    )}
+                    color="bg-primary"
+                />
+                <InfoCard
+                    label="Pending Tasks"
+                    value={addThousandsSeparator(
+                        dashboardData?.charts?.taskDistribution?.Pending || 0
+                    )}
+                    color="bg-amber-500"
+                />
+                <InfoCard
+                    label="In Progress Tasks"
+                    value={addThousandsSeparator(
+                        dashboardData?.charts?.taskDistribution?.InProgress || 0
+                    )}
+                    color="bg-cyan-500"
+                />
+                <InfoCard
+                    label="Completed Tasks"
+                    value={addThousandsSeparator(
+                        dashboardData?.charts?.taskDistribution?.Completed || 0
+                    )}
+                />
             </div>
 
             {/* Charts */}
@@ -191,19 +186,21 @@ const UserDashboard = () => {
             </div>
 
             {/* Recent Tasks */}
-            {dashboardData?.recentTasks && dashboardData.recentTasks.length > 0 && (
-                <div className="card my-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h5 className="text-lg">Recent Tasks</h5>
-                        <button className="card-btn" onClick={() => navigate("/user/tasks")}>
-                            See All <LuArrowRight className="text-base" />
-                        </button>
-                    </div>
+            {
+                dashboardData?.recentTasks && dashboardData.recentTasks.length > 0 && (
+                    <div className="card my-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <h5 className="text-lg">Recent Tasks</h5>
+                            <button className="card-btn" onClick={() => navigate("/user/tasks")}>
+                                See All <LuArrowRight className="text-base" />
+                            </button>
+                        </div>
 
-                    <TaskListTable tableData={dashboardData?.recentTasks || []} />
-                </div>
-            )}
-        </DashboardLayout>
+                        <TaskListTable tableData={dashboardData?.recentTasks || []} />
+                    </div>
+                )
+            }
+        </DashboardLayout >
     );
 };
 

@@ -9,6 +9,8 @@ const UserSchema = new mongoose.Schema({
     department: { type: String, default: "" },
     role: { type: String, enum: ["admin", "member", "manager"], default: "member" }, // Role-based access control
     isOnHold: { type: Boolean, default: false }, // If true, user cannot be assigned new tasks
+    mobile: { type: String, default: "" }, // Optional mobile number for profile info panel
+    bio: { type: String, default: "" }, // Short bio / more info
 },
     { timestamps: true });
 

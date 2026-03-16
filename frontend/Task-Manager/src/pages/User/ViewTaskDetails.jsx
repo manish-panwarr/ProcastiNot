@@ -6,6 +6,9 @@ import DashboardLayout from "../../components/layouts/DashboardLayout";
 import AvatarGroup from "../../components/AvatarGroup";
 import { getAvatarUrl } from "../../utils/helper";
 import { LuFile, LuImage, LuLink, LuVideo } from "react-icons/lu";
+import ReactMarkdown from "react-markdown";
+import moment from "moment";
+import toast from "react-hot-toast";
 
 
 
@@ -41,12 +44,13 @@ const ViewTaskDetails = () => {
         } catch (error) {
             console.error("Error fetching task details:", error);
             setError("Task not found or failed to load");
+            toast.error("Task not found or failed to load");
         } finally {
             setLoading(false);
         }
     };
 
-    // handle todo check
+
     const updateTodoChecklist = async (updatedChecklist) => {
         try {
             const response = await axiosInstance.put(API_PATHS.TASKS.UPDATE_TODO_CHECKLIST(id), {
@@ -55,7 +59,6 @@ const ViewTaskDetails = () => {
 
             if (response.data && response.data.task) {
                 setTask(response.data.task);
-                // toast.success("Checklist updated!"); // Optional: Feedback
             }
         } catch (error) {
             console.error("Error updating checklist:", error);
@@ -69,7 +72,6 @@ const ViewTaskDetails = () => {
         updateTodoChecklist(newChecklist);
     };
 
-    // handle attachment upload (Display only here)
     const handleLinkClick = (link) => {
         window.open(link, "_blank");
     };
@@ -113,8 +115,8 @@ const ViewTaskDetails = () => {
                         <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800">{task.title}</h2>
-                                    <p className="text-sm text-gray-500 mt-2">{task.description}</p>
+                                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800">{task.title || "Untitled Task"}</h2>
+                                    <p className="text-sm text-gray-500 mt-2">{task.description || "No description provided."}</p>
                                 </div>
                                 <div className={`text-xs font-semibold text-center ${getStatusTagColor(task?.status)} px-5 w-35 py-1 rounded-full`}>
                                     {task?.status}
@@ -128,7 +130,7 @@ const ViewTaskDetails = () => {
                                 </div>
                                 <div className="text-center">
                                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Due Date</label>
-                                    <p className="text-sm font-semibold text-gray-800 mt-1">{task.dueDate ? task.dueDate.split("T")[0] : "N/A"}</p>
+                                    <p className="text-sm font-semibold text-gray-800 mt-1">{task.dueDate ? moment(task.dueDate).format("Do MMM YYYY") : "N/A"}</p>
                                 </div>
                                 <div className="text-center">
                                     <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</label>
@@ -165,9 +167,11 @@ const ViewTaskDetails = () => {
                                                     onChange={() => handleCheckboxChange(index)}
                                                     className="w-5 h-5 mt-0.5 rounded text-primary focus:ring-primary/25 border-gray-300 cursor-pointer accent-primary"
                                                 />
-                                                <span className={`text-sm text-gray-700 flex-1 ${todo.completed ? "line-through text-gray-400" : ""}`}>
-                                                    {todo.text}
-                                                </span>
+                                                <div className={`flex-1 text-sm prose prose-sm max-w-none leading-normal prose-p:my-0 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 w-full whitespace-normal ${todo.completed ? "line-through text-gray-400" : "text-gray-700"}`}>
+                                                    <ReactMarkdown>
+                                                        {todo.text || ""}
+                                                    </ReactMarkdown>
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

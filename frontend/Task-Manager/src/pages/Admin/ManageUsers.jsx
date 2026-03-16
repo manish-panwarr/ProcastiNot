@@ -32,19 +32,18 @@ const ManageUsers = () => {
     try {
       console.log("Downloading report...");
       const response = await axiosInstance.get(API_PATHS.REPORTS.EXPORT_USERS, {
-        responseType: 'blob', // Important
-        timeout: 30000, // Wait longer for the report to generate
+        responseType: 'blob',
+        timeout: 30000,
       });
 
       if (response.status === 200) {
-        // Create a URL for the blob
         const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute("download", "users_report.xlsx"); // Ensure filename
+        link.setAttribute("download", "users_report.xlsx");
         document.body.appendChild(link);
         link.click();
-        link.parentNode.removeChild(link); // Clean up
+        link.parentNode.removeChild(link);
         window.URL.revokeObjectURL(url);
       } else {
         toast.error("Something went wrong while downloading the report.");

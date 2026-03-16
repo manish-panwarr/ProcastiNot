@@ -1,7 +1,7 @@
 import React from "react";
 import { MdTaskAlt } from "react-icons/md";
 import { BsStopwatch } from "react-icons/bs";
-import UI_IMG from "../../assets/images/bg1.png";
+import UI_IMG from "../../assets/images/auth-image-blue-bg.png";
 import UI_IMG2 from "../../assets/images/auth-image-alt0.png";
 
 const AuthLayout = ({ children }) => {

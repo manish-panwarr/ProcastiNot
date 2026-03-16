@@ -20,7 +20,6 @@ const UserProfile = () => {
         <DashboardLayout activeMenu="Profile">
             <div className="max-w-4xl mx-auto my-10">
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    {/* Header / Cover */}
                     <div className="h-32 bg-gradient-to-r from-blue-500 to-purple-600 relative">
                         <div className="absolute -bottom-16 left-8">
                             <div className="relative">

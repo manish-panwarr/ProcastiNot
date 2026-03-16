@@ -8,8 +8,7 @@ import { API_PATHS } from "../../utils/apiPaths";
 import InfoCard from "../../components/Cards/InfoCard";
 import CustomPieChart from "../../components/Charts/CustomPieChart";
 import CustomBarChart from "../../components/Charts/CustomBarChart";
-import { addThousandsSeparator, getInitials, getAvatarUrl } from "../../utils/helper";
-import AvatarGroup from "../../components/AvatarGroup"; // Assuming this exists or similar
+import { addThousandsSeparator, getInitials, getAvatarUrl, getGreeting } from "../../utils/helper";
 
 const PIE_COLORS = ["#8D51FF", "#00B8DB", "#7BCE00"];
 
@@ -53,7 +52,7 @@ const ManagerDashboard = () => {
         // Bar Chart: Top 5 Users by Tasks Completed
         const sortedUsers = [...userPerformance].sort((a, b) => b.completedAssigned - a.completedAssigned).slice(0, 5);
         const barData = sortedUsers.map(u => ({
-            priority: u.name, // Reusing CustomBarChart prop 'priority' for X-axis label
+            priority: u.name,
             count: u.completedAssigned
         }));
         setBarChartData(barData);
@@ -73,21 +72,23 @@ const ManagerDashboard = () => {
 
     return (
         <DashboardLayout activeMenu="Dashboard">
-            <div className="card my-5">
-                <h2 className="text-xl md:text-2xl">
-                    Manager Overview
-                </h2>
-                <p className="text-xs md:text-[13px] text-gray-400 mt-1.5 flex items-center gap-2">
-                    Welcome back, {user?.name}
-                    <span className="text-[10px] font-medium text-white bg-purple-600 px-2 py-0.5 rounded">Manager</span>
-                </p>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                    <InfoCard label="Total Users" value={stats?.totalUsers || 0} color="bg-blue-500" />
-                    <InfoCard label="Total Admins" value={stats?.totalAdmins || 0} color="bg-purple-500" />
-                    <InfoCard label="Total Tasks" value={stats?.totalTasks || 0} color="bg-indigo-500" />
-                    <InfoCard label="Completion Rate" value={`${stats?.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%`} color="bg-emerald-500" />
+            <div className="bg-white rounded-2xl p-6 md:p-8 mb-6 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-md">
+                <div className="flex flex-col gap-1">
+                    <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
+                        {getGreeting()}, <span className="text-primary">{user?.name}</span> 👋
+                    </h2>
+                    <p className="text-sm md:text-base text-gray-500 font-medium flex items-center gap-2 mt-1">
+                        <span>{moment().format("dddd, MMMM Do YYYY")}</span>
+                        <span className="text-[10px] md:text-xs font-semibold text-white bg-purple-600 px-2.5 py-0.5 rounded-full ml-2">Manager</span>
+                    </p>
                 </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 mt-6">
+                <InfoCard label="Total Users" value={stats?.totalUsers || 0} color="bg-blue-500" />
+                <InfoCard label="Total Admins" value={stats?.totalAdmins || 0} color="bg-purple-500" />
+                <InfoCard label="Total Tasks" value={stats?.totalTasks || 0} color="bg-indigo-500" />
+                <InfoCard label="Completion Rate" value={`${stats?.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0}%`} color="bg-emerald-500" />
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 my-6">
@@ -166,7 +167,7 @@ const ManagerDashboard = () => {
                     </table>
                 </div>
             </div>
-        </DashboardLayout>
+        </DashboardLayout >
     );
 };
 

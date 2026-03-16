@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_API_URL || "https://task-manager-pyuk.onrender.com";
+export const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 // utils/apiPaths.js
 

@@ -4,7 +4,9 @@ import {
     LuClipboardCheck,
     LuSquarePlus,
     LuLogOut,
+    LuMessageSquare,
 } from "react-icons/lu";
+
 
 export const SIDE_MENU_DATA = [
     {
@@ -39,11 +41,18 @@ export const SIDE_MENU_DATA = [
     },
     {
         id: "06",
+        label: "Chat",
+        icon: LuMessageSquare,
+        path: "/chat",
+    },
+    {
+        id: "07",
         label: "Logout",
         icon: LuLogOut,
         path: "/logout",
     },
 ];
+
 
 export const SIDE_MENU_USER_DATA = [
     {
@@ -66,12 +75,19 @@ export const SIDE_MENU_USER_DATA = [
     },
     {
         id: "04",
+        label: "Chat",
+        icon: LuMessageSquare,
+        path: "/chat",
+    },
+    {
+        id: "05",
         label: "Logout",
         icon: LuLogOut,
         path: "/logout",
     },
 
 ];
+
 
 export const PRIORITY_DATA = [
     { label: "Low", value: "Low" },

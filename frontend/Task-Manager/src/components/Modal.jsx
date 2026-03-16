@@ -7,9 +7,7 @@ const Modal = ({ children, isOpen, onClose, title }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm overflow-y-auto">
             <div className={`relative w-full max-w-lg p-3 md:p-5 transition-all transform duration-300 scale-100 opacity-100`}>
-                {/*Modal Content */}
                 <div className="relative bg-white rounded-xl shadow-2xl dark:bg-gray-100 flex flex-col max-h-[90vh]">
-                    {/*Header*/}
                     <div className="flex items-center justify-between p-4 border-b rounded-t border-gray-200">
                         <h3 className="text-lg font-semibold text-gray-800 ">
                             {title}
@@ -37,7 +35,6 @@ const Modal = ({ children, isOpen, onClose, title }) => {
                         </button>
                     </div>
 
-                    {/*Modal Body*/}
                     <div className="p-4 md:p-5 space-y-4 overflow-y-auto custom-scrollbar">
                         {children}
                     </div>

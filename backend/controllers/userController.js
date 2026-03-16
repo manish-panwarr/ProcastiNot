@@ -29,7 +29,7 @@ const getUsers = async (req, res) => {
                 });
 
                 return {
-                    ...user._doc, // Include all existing user data
+                    ...user._doc,
                     pendingTasks,
                     inProgressTasks,
                     completedTasks,
@@ -55,9 +55,8 @@ const getUserById = async (req, res) => {
 
         let tasks = [];
         let adminStats = null;
-        let adminsValues = []; // For "Working Under" or similar if needed, though for Admin it might be different
+        let adminsValues = [];
 
-        // If the user being viewed is an Admin or Manager, we want to see tasks they CREATED
         if (user.role === "admin" || user.role === "manager") {
             tasks = await Task.find({ createdBy: user._id }).populate("assignedTo", "name email");
 
@@ -67,7 +66,6 @@ const getUserById = async (req, res) => {
             const completed = tasks.filter(t => t.status === "Completed").length;
 
             // Calculate Rank based on Completed Tasks
-            // Aggregate to find completed task counts for all users (admins) implies finding all tasks first or using aggregate
             const checkRank = await Task.aggregate([
                 { $match: { status: "Completed" } },
                 { $group: { _id: "$createdBy", count: { $sum: 1 } } },
@@ -86,18 +84,9 @@ const getUserById = async (req, res) => {
                 rank
             };
 
-            // For "Admins", typically they don't "work under" others in the same way Users do.
-            // But valid to stick to existing response format for compatibility if needed.
-            // However, for AdminDetails we want to show 'tasks per user' or similar?
-            // For now, let's keep the return simple. 
-            // Existing frontend expects { user, tasks, admins }
-            // 'admins' was "uniqueAdminIds" of people who assigned tasks TO the user.
-            // For an Admin, tasks are assigned BY them. 
-            // We can return empty/null for things not relevant to Admin view.
         } else {
-            // Standard User View logic (tasks assigned TO them)
             tasks = await Task.find({ assignedTo: user._id }).populate("createdBy", "name email");
-            // Extract unique admins who assigned tasks
+
             const uniqueAdminIds = new Set();
 
             tasks.forEach(task => {
@@ -140,7 +129,6 @@ const updateUser = async (req, res) => {
         user.name = name || user.name;
         user.email = email || user.email;
         user.department = department || user.department;
-        // user.role = role || user.role; // Removed direct update
         if (typeof isOnHold !== 'undefined') user.isOnHold = isOnHold;
 
         const updatedUser = await user.save();
@@ -240,10 +228,26 @@ const getManagerDashboardStats = async (req, res) => {
     }
 };
 
+// @desc  Get all users for chat (any authenticated user)
+// @route GET /api/users/chat-list
+// @access Private (any logged-in user)
+const getChatUsers = async (req, res) => {
+    try {
+        // Return all users except the currently logged-in user
+        const users = await User.find({ _id: { $ne: req.user._id } })
+            .select("name email role department profileImageUrl")
+            .sort({ name: 1 });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: "Server error", error: error.message });
+    }
+};
+
 module.exports = {
     getUsers,
     getUserById,
     updateUser,
     deleteUser,
-    getManagerDashboardStats
+    getManagerDashboardStats,
+    getChatUsers
 };

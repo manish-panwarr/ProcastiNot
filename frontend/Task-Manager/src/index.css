@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --font-display: "Poppins", "sans-serif";
@@ -10,11 +11,24 @@
 @layer base {
   html {
     font-family: var(--font-display);
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
   }
 
   body {
     background-color: #fcfbfc;
     overflow-x: hidden;
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  #root {
+    height: 100%;
+    width: 100%;
   }
 }
 
@@ -54,4 +68,206 @@
 
 .form-input {
   @apply w-full text-sm text-black outline-none bg-white border border-slate-100 px-2.5 py-3 rounded-md mt-2 placeholder:text-gray-500 border-gray-200 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all;
+}
+
+.ci-root {
+  display: flex;
+  height: 100%;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
+  border: 1px solid #e8eef8;
+}
+
+.ci-panel {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.ci-panel-list {
+  min-width: 220px;
+  max-width: 520px;
+}
+
+.ci-panel-chat {
+  flex: 1;
+  min-width: 0;
+}
+
+.ci-panel-profile {
+  overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ci-resize-handle {
+  width: 6px;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  cursor: col-resize;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+}
+
+.ci-resize-handle:hover {
+  background: #e0e7ff;
+}
+
+.ci-resize-handle:active {
+  background: #c7d2fe;
+}
+
+.ci-resize-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #cbd5e1;
+  transition: background 0.15s;
+}
+
+.ci-resize-handle:hover .ci-resize-dot {
+  background: #6366f1;
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .ci-root {
+    height: 100%;
+    border-radius: 0;
+  }
+
+  .ci-resize-handle {
+    display: none !important;
+  }
+
+  .ci-panel {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    min-width: 100% !important;
+    height: 100%;
+    transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    opacity: 0;
+    pointer-events: none;
+    background: #fff;
+  }
+
+  .ci-panel.ci-active {
+    opacity: 1;
+    pointer-events: auto;
+    z-index: 2;
+  }
+
+  .ci-panel-list {
+    transform: translateX(-100%);
+  }
+
+  .ci-panel-chat {
+    transform: translateX(100%);
+  }
+
+  .ci-panel-profile {
+    transform: translateX(100%);
+  }
+
+  .ci-panel-list.ci-active {
+    transform: translateX(0);
+  }
+
+  .ci-panel-chat.ci-active {
+    transform: translateX(0);
+  }
+
+  .ci-panel-profile.ci-active {
+    transform: translateX(0);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(153, 153, 153, 0.2);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(19, 104, 236, 0.4);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(47, 131, 242, 0.2) transparent;
+}
+
+.navbar {
+  background: linear-gradient(90deg, #ffffff, #d8e1ef);
+  
+}
+
+@media (max-width: 768px) and (min-width: 351px) {
+  .layout {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+    margin-right: 7px;
+
+  }
+
+  .layout2 {
+    position: absolute;
+    right: 36px;
+  }
+
+  .navbar {
+    border-top-right-radius: 20px;
+    height: 60px;
+
+  }
+}
+
+@media (max-width: 639px) {
+  .notification-dropdown {
+    max-width: calc(100vw - 16px);
+  }
+}
+
+@media (min-width : 1023px) {
+  .layout {
+    margin-right: 0;
+
+  }
+
+  .layout2 {
+
+    position: absolute;
+    right: 30px;
+  }
+
+  .navbar {
+
+
+    border-end-end-radius: 40px;
+    height: 60px;
+
+
+  }
+
 }

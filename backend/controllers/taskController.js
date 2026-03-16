@@ -3,6 +3,7 @@ const User = require("../models/User");
 const moment = require("moment");
 const { cloudinary } = require("../utils/cloudinary");
 const fs = require("fs");
+const mongoose = require("mongoose");
 
 // @desc Get all tasks (Admin : all, User : only assigned tasks)
 // @route Get /api/tasks/
@@ -34,12 +35,12 @@ const getTasks = async (req, res) => {
             ];
         }
 
-        // Filter by Created By (Admin only feature usually, to see own tasks)
+        // Filter by Created By (Admin only feature, to see own tasks)
         if (req.query.createdByMe === "true") {
             filter.createdBy = req.user._id;
         }
 
-        // Filter by Assigned To Me (New feature for Admins/Managers to see their own assigned tasks)
+        // Filter by Assigned To Me (Admins/Managers to see their own assigned tasks)
         if (req.query.assignedToMe === "true") {
             filter.assignedTo = req.user._id;
         }
@@ -48,68 +49,39 @@ const getTasks = async (req, res) => {
         let tasks;
 
         if (req.user.role == "admin" || req.user.role == "manager") {
-            tasks = await Task.find(filter).populate(
-                "assignedTo",
-                "name email profileImageUrl department"
-            ).sort({ createdAt: -1 });
+            tasks = await Task.find(filter)
+                .populate("assignedTo", "name email profileImageUrl department")
+                .populate("createdBy", "_id name")
+                .sort({ createdAt: -1 });
         } else {
-            // For members, we might want to restrict to only their tasks, 
-            // OR if the requirement intends for members to see team tasks but filtered, logic might differ.
-            // Assuming default behavior: Members only see their assigned tasks.
-            // If search/department is used by member, it applies to THEIR tasks.
-
-            // However, the filter might overwrite 'assignedTo' from department logic.
-            // We need to ensure we intersect the 'assignedTo' requirements.
-
             let query = { ...filter };
 
             if (query.assignedTo) {
-                // If department filter exists, we need to make sure the logged-in user is also in that set (if they can only see their own tasks)
-                // OR if they can see tasks assigned to others in their team (unlikely based on previous logic).
-                // Preserving original logic: Members see tasks assigned to THEM.
-
-                // If department filter is set, and it doesn't include the user, they see nothing.
-                // But wait, if they only see their tasks, department filter on OTHERS doesn't make sense for them unless they are searching their own tasks which happens to be in a dept (which is redundant).
-                // So Department filter is likely ADMIN only feature, or broadly applicable.
-                // Let's stick to: Member sees ONLY tasks assigned to req.user._id
-
-                // If department filter is active, it adds { assignedTo: { $in: [...] } }
-                // We need to AND this with { assignedTo: req.user._id }
-
                 query.$and = [
                     { assignedTo: req.user._id },
                     { assignedTo: query.assignedTo }
                 ];
-                delete query.assignedTo; // Remove top level assignedTo to avoid conflict/override
+                delete query.assignedTo;
 
             } else {
                 query.assignedTo = req.user._id;
             }
 
-            tasks = await Task.find(query).populate(
-                "assignedTo",
-                "name email profileImageUrl department"
-            ).sort({ createdAt: -1 });
+            tasks = await Task.find(query)
+                .populate("assignedTo", "name email profileImageUrl department")
+                .populate("createdBy", "_id name")
+                .sort({ createdAt: -1 });
         }
-
-        // Add completed todoChecklist count to each task
 
         tasks = await Promise.all(
             tasks.map(async (task) => {
                 const completedCount = task.todoChecklist.filter((item) => item.completed).length;
                 return {
                     ...task._doc,
-                    completedTodocount: completedCount
+                    completedTodoCount: completedCount
                 };
             })
         );
-
-        // Status summary counts (needs to verify if filters should apply to summary? Usually summary is for ALL tasks or specific consistent view)
-        // Leaving summary logic as is (User's total tasks), or applying filters?
-        // Usually summary tiles show "Total Pending", "Total In Progress" regardless of search query.
-        // But if we want summary to reflect search, we pass filter.
-
-        // Let's keep summary static for the user/admin scope (ignoring search/dept filter for the counters at top often makes sense, strict requirement unspecified, defaulting to unscoped by search)
 
         const alltasks = await Task.countDocuments(
             (req.user.role == "admin" || req.user.role == "manager") ? {} : { assignedTo: req.user._id }
@@ -161,24 +133,23 @@ const getTaskById = async (req, res) => {
             return res.status(404).json({ message: "Task not found" });
         }
 
-        // Check if user has access
         const isAssigned = task.assignedTo.some(
             (user) => user && user._id.toString() === req.user._id.toString()
         );
+        const isCreator = task.createdBy && task.createdBy.toString() === req.user._id.toString();
 
-        if (req.user.role !== "admin" && req.user.role !== "manager" && !isAssigned) {
+        // Admins and managers can view any task
+        // Members can only view tasks assigned to them or created by them
+        if (req.user.role !== "admin" && req.user.role !== "manager" && !isAssigned && !isCreator) {
             return res.status(403).json({ message: "Forbidden: You don't have access to this task" });
         }
 
-        // Calculate completed todo checklist count
-        // const completedCount = task.todoChecklist.filter((item) => item.completed).length;
+        const completedCount = task.todoChecklist.filter((item) => item.completed).length;
 
-        // res.json({
-        //     ...task._doc,
-        //     completedTodocount: completedCount
-        // });
-
-        res.json(task);
+        res.json({
+            ...task._doc,
+            completedTodoCount: completedCount
+        });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
@@ -193,15 +164,11 @@ const createTask = async (req, res) => {
     try {
         let { title, description, priority, dueDate, assignedTo, attachments, todoChecklist } = req.body;
 
-        // Parse assignedTo if it's a string (from FormData)
         if (typeof assignedTo === "string") {
             try {
                 assignedTo = JSON.parse(assignedTo);
             } catch (error) {
-                // If parsing fails, maybe it's a single ID? Or invalid JSON.
-                // If it's a single ID string, we wrap it in array
                 if (assignedTo.trim().startsWith("[")) {
-                    // It looked like array but failed parse?
                     assignedTo = [];
                 } else {
                     assignedTo = [assignedTo];
@@ -210,7 +177,6 @@ const createTask = async (req, res) => {
         }
 
         if (!Array.isArray(assignedTo)) {
-            // It might be undelivered or empty?
             if (!assignedTo) assignedTo = [];
             else return res.status(400).json({ message: "assignedTo must be an array of user IDs" });
         }
@@ -228,7 +194,6 @@ const createTask = async (req, res) => {
             }
         }
 
-        // Parse todoChecklist if it's a string
         if (typeof todoChecklist === "string") {
             try {
                 todoChecklist = JSON.parse(todoChecklist);
@@ -239,8 +204,6 @@ const createTask = async (req, res) => {
 
         let attachmentData = [];
 
-        // Handle Links (passed in req.body.attachments)
-        // If attachments is passed as stringified JSON or plain string
         if (attachments) {
             let links = attachments;
             if (typeof links === "string") {
@@ -301,6 +264,35 @@ const createTask = async (req, res) => {
             todoChecklist,
             createdBy: req.user.id,
         });
+
+        // NOTIFICATIONS & WEBSOCKETS    
+        const Notification = require("../models/Notification");
+        for (const userId of assignedTo) {
+            const objId = mongoose.Types.ObjectId.isValid(userId) ? userId : null;
+            if (objId) {
+                const notify = new Notification({
+                    recipient: objId,
+                    type: "TASK_ASSIGNED",
+                    message: "A new task has been assigned to you.",
+                    task: task._id
+                });
+                await notify.save();
+
+                // Emit Real-Time Socket Event
+                const ioSocket = req.app.get("io");
+                if (ioSocket) {
+                    ioSocket.to(objId.toString()).emit("new_notification", {
+                        _id: notify._id,
+                        type: notify.type,
+                        message: notify.message,
+                        task: { _id: task._id, title: task.title },
+                        isRead: false,
+                        createdAt: notify.createdAt
+                    });
+                }
+            }
+        }
+
         res.status(201).json({ message: "Task created Successfully !", task });
     } catch (error) {
         console.log(error);
@@ -360,24 +352,6 @@ const updateTask = async (req, res) => {
 
         let newAttachments = task.attachments || [];
 
-        // If user sends updated attachments list (e.g. removed items), we should start with that list?
-        // Cloudinary management: if item removed, we should delete from Cloudinary?
-        // For now scope: user provides NEW list of links + FILES.
-        // If we only APPEND, user can't delete.
-        // If `attachments` field is sent, we replace?
-        // But files are separate.
-
-        // Logic:
-        // 1. If `attachments` (string/json) is provided, it REPLACES the current list (minus files being uploaded).
-        //    Wait, files from `req.files` are NEW.
-        //    The `attachments` field from frontend should contain:
-        //    - Existing file objects (preserved)
-        //    - New Links
-        //    - (Files are not in `attachments` field here, they are in `req.files`)
-
-        // So if `req.body.attachments` is present, we use it as the base.
-        // If it's NOT present (undefined), we keep existing `task.attachments` and append files?
-        // Usually `FormData` will send `attachments` if it's being updated.
 
         if (req.body.attachments) {
             let inputAttachments = req.body.attachments;
@@ -389,19 +363,16 @@ const updateTask = async (req, res) => {
                 }
             }
 
-            // Map inputAttachments to object structure
             let processedAttachments = [];
             if (Array.isArray(inputAttachments)) {
                 inputAttachments.forEach(item => {
                     if (typeof item === 'string') {
-                        // New link
                         processedAttachments.push({
                             fileUrl: item,
                             fileType: "link",
                             originalName: item,
                         });
                     } else if (typeof item === 'object') {
-                        // Existing object (preserved)
                         processedAttachments.push(item);
                     }
                 });
@@ -438,7 +409,36 @@ const updateTask = async (req, res) => {
         }
 
 
-        const updatedTask = await task.save();
+        await task.save();
+        const updatedTask = await Task.findById(task._id).populate("assignedTo", "name email profileImageUrl");
+
+        // NOTIFICATIONS & WEBSOCKETS 
+        const Notification = require("../models/Notification");
+        for (const user of updatedTask.assignedTo) {
+            const objId = user._id;
+            if (objId) {
+                const notify = new Notification({
+                    recipient: objId,
+                    type: "TASK_UPDATED",
+                    message: `Task "${updatedTask.title}" has been updated.`,
+                    task: updatedTask._id
+                });
+                await notify.save();
+
+                const ioSocket = req.app.get("io");
+                if (ioSocket) {
+                    ioSocket.to(objId.toString()).emit("new_notification", {
+                        _id: notify._id,
+                        type: notify.type,
+                        message: notify.message,
+                        task: { _id: updatedTask._id, title: updatedTask.title },
+                        isRead: false,
+                        createdAt: notify.createdAt
+                    });
+                }
+            }
+        }
+
         res.status(200).json({ message: "Task updated successfully!", task: updatedTask });
     } catch (error) {
         console.log("Update Task Error: ", error);
@@ -555,14 +555,14 @@ const updateTaskChecklist = async (req, res) => {
         const task = await Task.findById(req.params.id);
         if (!task) return res.status(404).json({ message: "Task not found" });
 
-        const isAssigned = task.assignedTo.includes(req.user._id);
+        const isAssigned = task.assignedTo.some((id) => id.toString() === req.user._id.toString());
         const isCreator = task.createdBy.toString() === req.user._id.toString();
 
         if (!isAssigned && !isCreator && req.user.role !== "manager") {
             return res.status(403).json({ message: "Not authorized to update this task" });
         }
 
-        task.todoChecklist = todoChecklist; // replace with updated checklist
+        task.todoChecklist = todoChecklist;
 
         // Auto-update progress based on chekcklist completion
         const completedCount = task.todoChecklist.filter(
@@ -582,7 +582,15 @@ const updateTaskChecklist = async (req, res) => {
 
         await task.save();
         const updatedTask = await Task.findById(req.params.id).populate("assignedTo", "name email profileImageUrl");
-        res.json({ message: "Task checklist updated successfully!", task: updatedTask });
+        const completedCountAfterUpdate = updatedTask.todoChecklist.filter((item) => item.completed).length;
+
+        res.json({
+            message: "Task checklist updated successfully!",
+            task: {
+                ...updatedTask._doc,
+                completedTodoCount: completedCountAfterUpdate
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: "Server error", error: error.message });
     }
@@ -603,7 +611,6 @@ const getDashboardData = async (req, res) => {
             dueDate: { $lt: new Date() },
         });
 
-        // Ensure all possible statuses are included
         const taskStatuses = ["Pending", "In Progress", "Completed"];
         const taskDistributionRaw = await Task.aggregate([
             {
@@ -620,13 +627,12 @@ const getDashboardData = async (req, res) => {
         ]);
 
         const taskDistribution = taskStatuses.reduce((acc, status) => {
-            const formattedKey = status.replace(/\s+/g, ""); // Remove spaces for response keys
+            const formattedKey = status.replace(/\s+/g, "");
             acc[formattedKey] = taskDistributionRaw.find((item) => item._id === status)?.count || 0;
             return acc;
         }, {});
-        taskDistribution["All"] = totalTasks; // Add total count to taskdristibution
+        taskDistribution["All"] = totalTasks;
 
-        // Ensure all priority levels are included
         const taskPriorities = ["Low", "Medium", "High"];
         const taskPriorityLevelsRaw = await Task.aggregate([
             {
@@ -643,7 +649,7 @@ const getDashboardData = async (req, res) => {
         ]);
 
         const taskPriorityLevels = taskPriorities.reduce((acc, priority) => {
-            const formattedKey = priority.replace(/\s+/g, ""); // Remove spaces for response keys
+            const formattedKey = priority.replace(/\s+/g, "");
             acc[formattedKey] = taskPriorityLevelsRaw.find((item) => item._id === priority)?.count || 0;
             return acc;
         }, {});
@@ -774,7 +780,7 @@ const getDashboardData = async (req, res) => {
             {
                 $match: {
                     status: "Completed",
-                    assignedTo: { $ne: [] } // Ensure assignedTo is not empty
+                    assignedTo: { $ne: [] }
                 }
             },
             {

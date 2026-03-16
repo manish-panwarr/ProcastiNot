@@ -15,10 +15,9 @@ import { UserContext } from '../../context/userContext';
 const ManageTasks = () => {
 
   const navigate = useNavigate();
-  const location = useLocation(); // Import useLocation if not already
-  const { user } = useContext(UserContext); // Get current user
+  const location = useLocation();
+  const { user } = useContext(UserContext);
 
-  // Check for initial filter from navigation state
   const initialFilterOwner = location.state?.filterOwner || "All";
 
   const [allTasks, setAllTasks] = useState([]);
@@ -26,7 +25,7 @@ const ManageTasks = () => {
   const [filterStatus, setFilterStatus] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterDepartment, setFilterDepartment] = useState("");
-  const [filterOwner, setFilterOwner] = useState(initialFilterOwner); // Initialize with state or default "All"
+  const [filterOwner, setFilterOwner] = useState(initialFilterOwner);
 
   const getAllTasks = async () => {
     try {
@@ -35,8 +34,8 @@ const ManageTasks = () => {
           status: filterStatus === "All" ? "" : filterStatus,
           department: filterDepartment,
           search: searchQuery,
-          createdByMe: filterOwner === "created_by_me" ? "true" : "", // Pass parameter
-          assignedToMe: filterOwner === "assigned_to_me" ? "true" : "", // Pass parameter
+          createdByMe: filterOwner === "created_by_me" ? "true" : "",
+          assignedToMe: filterOwner === "assigned_to_me" ? "true" : "",
         },
       });
 
@@ -62,42 +61,42 @@ const ManageTasks = () => {
   };
 
   const handleClick = (taskData) => {
-    // Permission Check: Only Manager or Creator can edit
-    // taskData.createdBy might be an object (if populated) or string. Safe check:
-    const creatorId = typeof taskData.createdBy === 'object' ? taskData.createdBy._id : taskData.createdBy;
+    let creatorId = taskData.createdBy;
+    if (creatorId && typeof creatorId === 'object' && creatorId._id) {
+      creatorId = creatorId._id;
+    }
+    const creatorIdStr = creatorId ? creatorId.toString() : '';
 
-    // Check if user is Manager, Creator, Admin, or Assigned
-    const isAssigned = taskData.assignedTo?.some(u =>
-      (u._id?.toString() || u?.toString()) === user?._id?.toString()
-    );
+    const isManager = user?.role === 'manager';
+    const isAdmin = user?.role === 'admin';
+    const isCreator = creatorIdStr === user?._id?.toString();
 
-    const isManager = user?.role === "manager";
-    const isCreator = creatorId?.toString() === user?._id?.toString();
+    const isAssigned = taskData.assignedTo?.some(u => {
+      const uid = u?._id ? u._id.toString() : u?.toString();
+      return uid === user?._id?.toString();
+    });
 
-    // If Assigned (regardless of role), go to View Task (to complete/checklist)
-    // Priority: If assigned, they likely want to work on it. 
-    // BUT if they are ALSO the creator, they might want to EDIT. 
-    // Usually, clicking the card body goes to View. Edit button (if we had one) goes to Edit.
-    // Here we only have one click action.
-    // Let's say: If Creator OR Manager -> Edit. 
-    // If Assigned AND NOT Creator/Manager -> View.
-    // Wait, if I am Admin and Created it, I want to Edit.
-    // If I am Admin and Assigned (by someone else), I want to View/Work.
-
+    // Manager or Creator → Edit/Update page
     if (isManager || isCreator) {
       navigate(`/admin/create-task`, { state: { taskId: taskData._id } });
       return;
     }
 
+    // Admin assigned to task → View details
+    if (isAdmin && isAssigned) {
+      navigate(`/user/task-details/${taskData._id}`);
+      return;
+    }
+
+
+    // Regular member assigned to task → View details
     if (isAssigned) {
       navigate(`/user/task-details/${taskData._id}`);
       return;
     }
 
-    // Access Denied
-    toast.error("Access denied. You can only edit tasks you created or are assigned to.");
+    toast.error('Access denied. You can only view tasks you created or are assigned to.');
   };
-  // ... (rest of code) ...
 
 
   // download task report
@@ -107,14 +106,13 @@ const ManageTasks = () => {
         responseType: 'blob',
       });
 
-      // Create a URL for the blob
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute("download", "tasks_report.xlsx"); // Match backend filename if possible, otherwise custom
+      link.setAttribute("download", "tasks_report.xlsx");
       document.body.appendChild(link);
-      link.click(); // Programmatically click the link
-      link.remove(); // Remove link from body
+      link.click();
+      link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.log("Error downloading report:", error);
@@ -125,7 +123,7 @@ const ManageTasks = () => {
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       getAllTasks();
-    }, 300); // 300ms debounce for search
+    }, 300);
 
     return () => clearTimeout(delayDebounceFn);
   }, [filterStatus, filterDepartment, searchQuery, filterOwner]);
@@ -180,7 +178,6 @@ const ManageTasks = () => {
               />
             </div>
 
-            {/* Unified Download Button */}
             <button className='flex items-center justify-center gap-2 download-btn whitespace-nowrap' onClick={handleDownloadReport}>
               <LuFileSpreadsheet className='text-xl' /> <span className="hidden md:inline">Download Report</span><span className="md:hidden">Export</span>
             </button>
@@ -188,7 +185,6 @@ const ManageTasks = () => {
           </div>
         </div>
 
-        {/* Tabs */}
         {tabs?.[0]?.count >= 0 && (
           <div className='flex flex-col md:flex-row md:items-center justify-between mt-2 gap-4'>
             <TaskStatusTabs
@@ -212,7 +208,7 @@ const ManageTasks = () => {
               createdAt={item.createdAt}
               dueDate={item.dueDate}
               assignedTo={item.assignedTo}
-              assignedToUser={item.assignedTo} // Pass full user objects if needed for checking dept
+              assignedToUser={item.assignedTo}
               attachmentCount={item.attachments?.length || 0}
               completedTodoCount={item.completedTodoCount || 0}
               todoChecklist={item.todoChecklist || []}

@@ -16,15 +16,16 @@ import UserDetails from './pages/Admin/UserDetails';
 import ManageAdmins from './pages/Admin/ManageAdmins';
 import AdminDetails from './pages/Admin/AdminDetails';
 import CreateTask from './pages/Admin/CreateTask';
-import ManagerDashboard from './pages/Admin/ManagerDashboard'; // Import Manager Dashboard
+import ManagerDashboard from './pages/Admin/ManagerDashboard';
 
 import UserDashboard from './pages/User/UserDashboard';
 import MyTasks from './pages/User/MyTasks';
 import UserProfile from './pages/User/UserProfile';
 import ViewTaskDetails from './pages/User/ViewTaskDetails';
+import ChatPage from './pages/Chat/ChatPage';
+
 
 import PrivateRoute from './routes/PrivateRoute';
-import UserProvider from './context/userContext';
 import { Outlet } from 'react-router-dom';
 import { useContext } from 'react';
 import { UserContext } from './context/userContext';
@@ -32,19 +33,20 @@ import { Toaster } from 'react-hot-toast';
 
 const App = () => {
   return (
-    <UserProvider>
+    <>
+
       <div>
         <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<SignUp />} />
 
-            {/* Manager Routes - has checks for 'manager' role */}
+            {/* Manager Routes */}
             <Route element={<PrivateRoute allowedRoles={["manager"]} />}>
               <Route path="/manager/dashboard" element={<ManagerDashboard />} />
             </Route>
 
-            {/*Admin Routes - Accessible by Admin AND Manager (since Manager has Admin privileges + more) */}
+            {/*Admin Routes */}
             <Route element={<PrivateRoute allowedRoles={["admin", "manager"]} />}>
               <Route path="/admin/dashboard" element={<Dashboard />} />
               <Route path="/admin/tasks" element={<ManageTasks />} />
@@ -55,16 +57,15 @@ const App = () => {
               <Route path="/admin/admins/:id" element={<AdminDetails />} />
             </Route>
 
-            {/*User Routes - Shared with Admin/Manager for View details */}
+            {/*User Routes */}
             <Route element={<PrivateRoute allowedRoles={['user', 'member', 'admin', 'manager']} />}>
               <Route path="/user/dashboard" element={<UserDashboard />} />
               <Route path="/user/tasks" element={<MyTasks />} />
               <Route path="/user/profile" element={<UserProfile />} />
               <Route path="/user/task-details/:id" element={<ViewTaskDetails />} />
+              <Route path="/chat" element={<ChatPage />} />
             </Route>
 
-            {/* <Route path="/" element={<Navigate to="/login" />} /> */}
-            {/*  Default Route*/}
             <Route path="/" element={<Root />} />
           </Routes>
         </Router>
@@ -80,9 +81,10 @@ const App = () => {
           },
         }}
       />
-    </UserProvider>
+    </>
   );
 }
+
 
 export default App;
 

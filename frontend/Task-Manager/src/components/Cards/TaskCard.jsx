@@ -6,7 +6,6 @@ import moment from "moment";
 import { getAvatarUrl } from "../../utils/helper";
 
 const TaskCard = (props) => {
-    // ... no changes until AvatarGroup ...
     const { title, description, status, progress, createdAt, dueDate, assignedTo, attachmentCount, completedTodoCount, todoChecklist, onClick, priority } = props;
 
     const getStatusTagColor = () => {

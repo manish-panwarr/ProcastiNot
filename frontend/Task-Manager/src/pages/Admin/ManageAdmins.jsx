@@ -18,7 +18,6 @@ const ManageAdmins = () => {
         try {
             const response = await axiosInstance.get(API_PATHS.USERS.GET_ALL_USERS);
             if (response.data?.length > 0) {
-                // Filter only admins
                 const admins = response.data.filter(user => user.role?.toLowerCase() === 'admin');
                 setAllAdmins(admins);
             }

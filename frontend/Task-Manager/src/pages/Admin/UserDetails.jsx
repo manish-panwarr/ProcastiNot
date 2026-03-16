@@ -20,14 +20,7 @@ const UserDetails = () => {
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const { user } = useContext(UserContext); // Get current logged-in user info
-    // Admin can delete User, Manager can delete User.
-    // So Delete button should be visible to both.
-    // However, backend prevents Admin from deleting Admin/Manager.
-    // UserDetails page is for "Users", but if an admin's id is passed here it might show admin data if not handled carefully.
-    // But assuming UserDetails is for non-admins primarily, or we handle logic.
-    // Actually, logic is: Admin can delete Member. Manager can delete Member.
-    // So Delete button is fine for both.
+    const { user } = useContext(UserContext);
 
     const isManager = user?.role === "manager";
 
@@ -54,7 +47,6 @@ const UserDetails = () => {
                 setAssignedTasks(response.data.tasks || []);
                 setWorkingUnder(response.data.admins || []);
 
-                // Initialize edit form data
                 setEditFormData({
                     name: response.data.user.name,
                     email: response.data.user.email,

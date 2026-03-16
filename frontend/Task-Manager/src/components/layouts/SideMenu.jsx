@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useContext } from 'react'
-import { UserContext } from '../../context/userContext';
-import { useNavigate } from 'react-router-dom';
-import { SIDE_MENU_DATA, SIDE_MENU_USER_DATA } from '../../utils/data';
+import React, { useState, useEffect, useContext } from "react";
+import { UserContext } from "../../context/userContext";
+import { useNavigate } from "react-router-dom";
+import { SIDE_MENU_DATA, SIDE_MENU_USER_DATA } from "../../utils/data";
 import { MdOutlineEdit } from "react-icons/md";
-import UpdateUserModal from '../Cards/UpdateUserModal';
-import { getAvatarUrl } from '../../utils/helper';
-
+import UpdateUserModal from "../Cards/UpdateUserModal";
+import { getAvatarUrl } from "../../utils/helper";
+import { BsStopwatch } from "react-icons/bs";
 
 const SideMenu = ({ activeMenu, isMobile = false }) => {
-
-
     const { user, clearUser, updateUser } = useContext(UserContext);
-    const [sideMenuData, setOpenSideMenuData] = useState([]);
+    const [sideMenuData, setSideMenuData] = useState([]);
     const [openUpdateModal, setOpenUpdateModal] = useState(false);
 
     const navigate = useNavigate();
@@ -28,7 +26,7 @@ const SideMenu = ({ activeMenu, isMobile = false }) => {
     const handleLogout = () => {
         localStorage.clear();
         clearUser();
-        navigate('/login');
+        navigate("/login");
     };
 
     const handleUserUpdate = (updatedUser) => {
@@ -37,67 +35,85 @@ const SideMenu = ({ activeMenu, isMobile = false }) => {
     };
 
     useEffect(() => {
-        if (user) {
-            let menuData = user?.role === 'admin' || user?.role === 'manager' ? [...SIDE_MENU_DATA] : [...SIDE_MENU_USER_DATA];
+        if (!user) return;
 
-            // If manager, update Dashboard link
-            if (user?.role === 'manager') {
-                menuData = menuData.map(item => {
-                    if (item.label === 'Dashboard') {
-                        return { ...item, path: '/manager/dashboard' };
-                    }
-                    return item;
-                });
-            }
-            setOpenSideMenuData(menuData);
+        let menuData =
+            user.role === "admin" || user.role === "manager"
+                ? [...SIDE_MENU_DATA]
+                : [...SIDE_MENU_USER_DATA];
+
+        if (user.role === "manager") {
+            menuData = menuData.map((item) =>
+                item.label === "Dashboard"
+                    ? { ...item, path: "/manager/dashboard" }
+                    : item
+            );
         }
-        return () => { };
-    }, [user]);
 
+        setSideMenuData(menuData);
+    }, [user]);
 
     return (
         <>
-            <div className={`${isMobile ? 'w-full h-full' : 'w-64 h-[calc(100vh-61px)] google-font sticky top-[60px] border-r border-gray-200/50'} bg-white z-20 flex flex-col`}>
-                <div className='flex flex-col items-center justify-center mb-7 pt-5'>
-                    <div className='relative'>
-                        <img src={getAvatarUrl(user?.profileImageUrl, user?.name)}
-                            alt="Profile Image"
-                            className='w-20 h-20 bg-slate-400 rounded-full object-cover'
+            <div
+                className={`${isMobile
+                    ? "w-full flex flex-col"
+                    : "w-full h-full pt-4"
+                    }  flex-col overflow-y-auto `}
+            >
+
+                {/* User Section */}
+                <div className="flex flex-col items-center justify-center mb-7 pt-10">
+                    <div className="relative">
+                        <img
+                            src={getAvatarUrl(user?.profileImageUrl, user?.name)}
+                            alt="Profile"
+                            className="w-26 h-26 bg-slate-400 rounded-full object-cover"
                         />
+
                         <button
-                            className='absolute bottom-0 right-0 h-7 w-7 bg-blue-500 rounded-full text-white flex items-center justify-center cursor-pointer hover:bg-blue-600 transition'
+                            className="absolute bottom-0 right-0 h-7 w-7 bg-blue-500 rounded-full text-white flex items-center justify-center hover:bg-blue-600"
                             onClick={() => setOpenUpdateModal(true)}
                         >
-                            <MdOutlineEdit className='text-sm' />
+                            <MdOutlineEdit className="text-sm" />
                         </button>
                     </div>
 
-                    {user?.role === 'admin' && (
-                        <div className='text-[10px] font-medium text-white bg-primary px-3 py-0.5 rounded mt-1'>Admin</div>
-                    )}
-                    {user?.role === 'manager' && (
-                        <div className='text-[10px] font-medium text-white bg-green-500 px-3 py-0.5 rounded mt-1'>Manager</div>
+                    {user?.role === "admin" && (
+                        <div className="text-[10px] font-medium text-white bg-blue-600 px-3 py-0.5 rounded mt-1">
+                            Admin
+                        </div>
                     )}
 
-                    <h5 className='text-gray-950 font-medium leading-6 mt-3'>
+                    {user?.role === "manager" && (
+                        <div className="text-[10px] font-medium text-white bg-green-500 px-3 py-0.5 rounded mt-1">
+                            Manager
+                        </div>
+                    )}
+
+                    <h5 className="text-gray-900 font-medium mt-3">
                         {user?.name || ""}
                     </h5>
 
-                    <p className="text-[12px] text-gray-500">{user?.email || ""}</p>
+                    <p className="text-xs text-gray-500">{user?.email || ""}</p>
                 </div>
 
-                {sideMenuData.map((item, index) => (
-                    <button
-                        key={`menu_${index}`}
-                        className={`w-full flex items-center gap-4 text-[15px] ${activeMenu == item.label
-                            ? "text-primary bg-blue-50/40 border-r-4 border-primary" : "text-gray-700 hover:bg-gray-100"
-                            } py-3 px-6 mb-3 cursor-pointer transition-colors duration-200`}
-                        onClick={() => handleClick(item.path)}
-                    >
-                        <item.icon className='text-xl' />
-                        {item.label}
-                    </button>
-                ))}
+                {/* Menu */}
+                <div className="flex flex-col">
+                    {sideMenuData.map((item, index) => (
+                        <button
+                            key={index}
+                            onClick={() => handleClick(item.path)}
+                            className={`w-full flex items-center gap-4 text-sm py-3 px-6 mb-1 transition ${activeMenu === item.label
+                                ? "text-blue-600 bg-blue-50 border-r-4 border-blue-600"
+                                : "text-gray-700 hover:bg-gray-100"
+                                }`}
+                        >
+                            <item.icon className="text-xl" />
+                            {item.label}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <UpdateUserModal

@@ -7,7 +7,7 @@ const TaskListTable = ({ tableData }) => {
         switch (status) {
             case 'Completed': return 'bg-green-100 text-green-800 border border-green-200'
             case 'Pending': return 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-            case 'InProgress': return 'bg-blue-100 text-blue-800 border border-blue-200'
+            case 'In Progress': return 'bg-blue-100 text-blue-800 border border-blue-200'
             case 'Overdue': return 'bg-red-100 text-red-800 border border-red-200'
             default: return 'bg-gray-100 text-gray-800 border border-gray-200'
         }
@@ -34,7 +34,7 @@ const TaskListTable = ({ tableData }) => {
                 </thead>
                 <tbody>
                     {tableData.map((task) => (
-                        <tr key={task.id} className='border-t border-gray-200'>
+                        <tr key={task._id || task.id} className='border-t border-gray-200 hover:bg-gray-50 cursor-pointer'>
                             <td className='my-3 mx-4 text-gray-700 text-[13px] line-clamp-1 overflow-hidden'>{task.title}</td>
                             <td className='py-4 px-4'>
                                 <span className={`px-2 py-1 text-xs rounded inline-block ${getStatusBadgeColor(task.status)}`}>{task.status}</span>

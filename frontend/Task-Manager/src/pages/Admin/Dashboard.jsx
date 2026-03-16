@@ -13,7 +13,7 @@ import CustomPieChart from "../../components/Charts/CustomPieChart";
 import CustomBarChart from "../../components/Charts/CustomBarChart";
 import CustomLineChart from "../../components/Charts/CustomLineChart";
 import UserPerformanceCard from "../../components/Cards/UserPerformanceCard";
-import { addThousandsSeparator, getInitials } from "../../utils/helper";
+import { addThousandsSeparator, getInitials, getGreeting } from "../../utils/helper";
 
 const PIE_COLORS = ["#8D51FF", "#00B8DB", "#7BCE00"];
 
@@ -66,18 +66,15 @@ const Dashboard = () => {
 
     // Tasks by Department
     const deptData = Object.keys(tasksByDepartment).map(key => ({
-      status: key, // Reusing CustomPieChart which expects 'status' or generic name? Let's check CustomPieChart prop usage
-      // CustomPieChart likely uses nameKey="status". Let's assume it does or I should have checked.
-      // Actually, looking at pieData above: { status: "Pending", count: ... }
-      // So it likely uses 'status' as the name key.
+      status: key,
       count: tasksByDepartment[key]
     }));
     setDeptChartData(deptData);
 
     // Active Workload
     const workloadData = activeWorkload.map(item => ({
-      priority: getInitials(item.name), // Use initials for chart label
-      fullName: item.name, // Full name for tooltip
+      priority: getInitials(item.name),
+      fullName: item.name,
       count: item.count
     }));
     setWorkloadChartData(workloadData);
@@ -112,44 +109,46 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout activeMenu="Dashboard">
-      <div className="card my-5">
-        <h2 className="text-xl md:text-2xl">
-          Good Morning! {user?.name}
-        </h2>
-        <p className="text-xs md:text-[13px] text-gray-400 mt-1.5">
-          {moment().format("dddd Do MMM YYYY")}
-        </p>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <InfoCard
-            label="Total Tasks"
-            value={addThousandsSeparator(
-              dashboardData?.charts?.taskDistribution?.All || 0
-            )}
-            color="bg-primary"
-          />
-          <InfoCard
-            label="Pending Tasks"
-            value={addThousandsSeparator(
-              dashboardData?.charts?.taskDistribution?.Pending || 0
-            )}
-            color="bg-amber-500"
-          />
-          <InfoCard
-            label="In Progress Tasks"
-            value={addThousandsSeparator(
-              dashboardData?.charts?.taskDistribution?.InProgress || 0
-            )}
-            color="bg-cyan-500"
-          />
-          <InfoCard
-            label="Completed Tasks"
-            value={addThousandsSeparator(
-              dashboardData?.charts?.taskDistribution?.Completed || 0
-            )}
-            color="bg-lime-500"
-          />
+      <div className="bg-white rounded-2xl p-6 md:p-8 mb-6 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 transition-all hover:shadow-md">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-xl md:text-2xl font-semibold text-gray-800">
+            {getGreeting()}, <span className="text-primary">{user?.name}</span> 👋
+          </h2>
+          <p className="text-sm md:text-base text-gray-500 font-medium">
+            {moment().format("dddd, MMMM Do YYYY")}
+          </p>
         </div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8 mt-6">
+        <InfoCard
+          label="Total Tasks"
+          value={addThousandsSeparator(
+            dashboardData?.charts?.taskDistribution?.All || 0
+          )}
+          color="bg-primary"
+        />
+        <InfoCard
+          label="Pending Tasks"
+          value={addThousandsSeparator(
+            dashboardData?.charts?.taskDistribution?.Pending || 0
+          )}
+          color="bg-amber-500"
+        />
+        <InfoCard
+          label="In Progress Tasks"
+          value={addThousandsSeparator(
+            dashboardData?.charts?.taskDistribution?.InProgress || 0
+          )}
+          color="bg-cyan-500"
+        />
+        <InfoCard
+          label="Completed Tasks"
+          value={addThousandsSeparator(
+            dashboardData?.charts?.taskDistribution?.Completed || 0
+          )}
+          color="bg-lime-500"
+        />
       </div>
 
       <div className="flex justify-end mb-4">
@@ -208,7 +207,7 @@ const Dashboard = () => {
 
         <TaskListTable tableData={dashboardData?.recentTasks || []} />
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 };
 

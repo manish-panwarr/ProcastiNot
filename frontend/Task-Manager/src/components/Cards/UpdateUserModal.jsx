@@ -56,12 +56,12 @@ const UpdateUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                 },
             });
             setUploading(false);
-            return response.data.imageUrl; // Assuming API returns { imageUrl: "..." }
+            return response.data.imageUrl;
         } catch (error) {
             setUploading(false);
             console.error("Image upload failed:", error);
             toast.error("Failed to upload image");
-            return null; // Return null to indicate failure
+            return null;
         }
     };
 
@@ -74,7 +74,7 @@ const UpdateUserModal = ({ isOpen, onClose, user, onUpdate }) => {
             if (uploadedUrl) {
                 imageUrl = uploadedUrl;
             } else {
-                return; // Stop if upload failed
+                return;
             }
         }
 
@@ -136,7 +136,6 @@ const UpdateUserModal = ({ isOpen, onClose, user, onUpdate }) => {
                             onChange={handleImageChange}
                         />
                     </div>
-                    {/* {uploading && <p className="text-sm text-blue-500 animate-pulse">Uploading image...</p>} */}
                 </div>
 
                 <div className="space-y-4">

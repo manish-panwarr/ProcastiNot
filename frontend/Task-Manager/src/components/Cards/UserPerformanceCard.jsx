@@ -2,9 +2,6 @@ import React from 'react';
 import { getAvatarUrl } from '../../utils/helper';
 
 const UserPerformanceCard = ({ data }) => {
-    // data assumed to be array of Top Performers: [{_id, count, name, email, profileImageUrl, department}]
-
-    // Find max count to normalize progress bar
     const maxCount = data && data.length > 0 ? Math.max(...data.map(u => u.count)) : 1;
 
     return (
@@ -18,9 +15,9 @@ const UserPerformanceCard = ({ data }) => {
                         <div key={user._id} className="flex items-center gap-4">
                             {/* Rank Badge */}
                             <div className={`w-8 h-8 flex items-center justify-center rounded-full text-xs font-bold ${index === 0 ? "bg-yellow-100 text-yellow-600" :
-                                    index === 1 ? "bg-gray-100 text-gray-600" :
-                                        index === 2 ? "bg-orange-100 text-orange-600" :
-                                            "bg-slate-50 text-slate-500"
+                                index === 1 ? "bg-gray-100 text-gray-600" :
+                                    index === 2 ? "bg-orange-100 text-orange-600" :
+                                        "bg-slate-50 text-slate-500"
                                 }`}>
                                 {index + 1}
                             </div>
@@ -41,9 +38,9 @@ const UserPerformanceCard = ({ data }) => {
                                 <div className="w-full bg-gray-100 rounded-full h-1.5">
                                     <div
                                         className={`h-1.5 rounded-full ${index === 0 ? "bg-yellow-400" :
-                                                index === 1 ? "bg-gray-400" :
-                                                    index === 2 ? "bg-orange-400" :
-                                                        "bg-slate-400"
+                                            index === 1 ? "bg-gray-400" :
+                                                index === 2 ? "bg-orange-400" :
+                                                    "bg-slate-400"
                                             }`}
                                         style={{ width: `${(user.count / maxCount) * 100}%` }}
                                     ></div>
