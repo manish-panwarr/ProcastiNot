@@ -133,9 +133,14 @@ const sendMessage = async (req, res) => {
 
         const uploadedFiles = req.files || [];
         for (const file of uploadedFiles) {
+            let resourceType = "auto";
+            if (file.mimetype === "application/pdf" || file.mimetype.includes("document") || file.mimetype.includes("text")) {
+                resourceType = "raw";
+            }
             // Upload to Cloudinary
-            const result = await uploadToCloudinary(file.buffer, "chat_media");
+            const result = await uploadToCloudinary(file.buffer, "chat_media", resourceType);
             const mediaUrl = result.secure_url;
+
 
             const fileMsg = await Message.create({
                 conversationId: conversation._id,

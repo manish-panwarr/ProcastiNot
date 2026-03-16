@@ -17,37 +17,7 @@ const {
 
 const router = express.Router();
 
-const fs = require("fs");
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        const uploadPath = path.join(__dirname, "../uploads/chat");
-        if (!fs.existsSync(uploadPath)) {
-            fs.mkdirSync(uploadPath, { recursive: true });
-        }
-        cb(null, uploadPath);
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        const base = path.basename(file.originalname, ext).replace(/\s+/g, "_").slice(0, 60);
-        cb(null, `${Date.now()}-${base}${ext}`);
-    }
-});
-
-const fileFilter = (req, file, cb) => {
-    const allowed = /image\/*|video\/*|audio\/*|application\/(pdf|msword|vnd\.openxmlformats|vnd\.ms-|zip|x-zip|x-rar|x-7z)|text\/.*/;
-    if (allowed.test(file.mimetype)) {
-        cb(null, true);
-    } else {
-        cb(new Error("Unsupported file type"), false);
-    }
-};
-
-const upload = multer({
-    storage,
-    fileFilter,
-    limits: { fileSize: 50 * 1024 * 1024 }
-});
+const upload = require("../middlewares/chatUploadMiddleware");
 
 router.get("/conversations", protect, getConversations);
 router.get("/messages/:conversationId", protect, getMessages);

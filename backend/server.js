@@ -27,19 +27,7 @@ const allowedOrigins = [
 
 //  origin checker 
 function isOriginAllowed(origin) {
-    if (!origin) return true;
-
-    // // Always allow localhost / 127.0.0.1 on any port
-    // if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return true;
-
-    // // Allow ANY ngrok tunnel URL automatically
-    // if (/^https?:\/\/[\w-]+\.ngrok-free\.app$/.test(origin)) return true;
-    // if (/^https?:\/\/[\w-]+\.ngrok\.io$/.test(origin)) return true;
-
-    // Allow explicitly-configured origins
-    if (allowedOrigins.includes(origin)) return true;
-
-    return false;
+    return true; // Allow all origins to prevent CORS issues with Vercel and Socket.io
 }
 
 const corsOptions = {
