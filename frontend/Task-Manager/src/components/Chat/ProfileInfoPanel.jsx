@@ -3,6 +3,7 @@ import axiosInstance from "../../utils/axiosInstance";
 import { getInitials } from "../../utils/helper";
 import { useSocket } from "../../context/SocketContext";
 import ConfirmDialog from "./ConfirmDialog";
+import { BASE_URL } from "../../utils/apiPaths";
 
 const ProfileInfoPanel = ({
     user,
@@ -28,8 +29,6 @@ const ProfileInfoPanel = ({
     const [confirmDialog, setConfirmDialog] = useState(null);
     const [showAddMemberModal, setShowAddMemberModal] = useState(false);
     const { socket } = useSocket();
-
-    const BASE_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000";
 
     const getFullUrl = (path) => {
         if (!path) return "";

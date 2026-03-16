@@ -3,6 +3,7 @@ const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const fs = require("fs");
 const path = require("path");
+const { uploadToCloudinary } = require("../utils/cloudinary");
 
 const getConversations = async (req, res) => {
     try {
@@ -132,7 +133,10 @@ const sendMessage = async (req, res) => {
 
         const uploadedFiles = req.files || [];
         for (const file of uploadedFiles) {
-            const mediaUrl = `/uploads/chat/${file.filename}`;
+            // Upload to Cloudinary
+            const result = await uploadToCloudinary(file.buffer, "chat_media");
+            const mediaUrl = result.secure_url;
+
             const fileMsg = await Message.create({
                 conversationId: conversation._id,
                 sender: senderId,
@@ -209,8 +213,8 @@ const deleteConversation = async (req, res) => {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return res.status(404).json({ message: "Conversation not found" });
 
-        // 1. Delete Group Avatar if exists
-        if (conversation.groupAvatar) {
+        // 1. Delete Group Avatar if exists (Legacy local files only)
+        if (conversation.groupAvatar && !conversation.groupAvatar.startsWith("http")) {
             const avatarPath = path.join(__dirname, "..", conversation.groupAvatar);
             if (fs.existsSync(avatarPath)) {
                 fs.unlinkSync(avatarPath);
@@ -224,7 +228,7 @@ const deleteConversation = async (req, res) => {
         });
 
         messagesWithFiles.forEach(msg => {
-            if (msg.fileTransfer && msg.fileTransfer.mediaUrl) {
+            if (msg.fileTransfer && msg.fileTransfer.mediaUrl && !msg.fileTransfer.mediaUrl.startsWith("http")) {
                 const filePath = path.join(__dirname, "..", msg.fileTransfer.mediaUrl);
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
@@ -260,7 +264,7 @@ const clearChat = async (req, res) => {
         });
 
         messagesWithFiles.forEach(msg => {
-            if (msg.fileTransfer && msg.fileTransfer.mediaUrl) {
+            if (msg.fileTransfer && msg.fileTransfer.mediaUrl && !msg.fileTransfer.mediaUrl.startsWith("http")) {
                 const filePath = path.join(__dirname, "..", msg.fileTransfer.mediaUrl);
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath);
@@ -353,7 +357,8 @@ const createGroup = async (req, res) => {
 
         let groupAvatar = "";
         if (req.file) {
-            groupAvatar = `/uploads/chat/${req.file.filename}`;
+            const result = await uploadToCloudinary(req.file.buffer, "group_avatars");
+            groupAvatar = result.secure_url;
         }
 
         const conversation = await Conversation.create({
@@ -407,7 +412,8 @@ const updateGroupSettings = async (req, res) => {
         if (messagingMode) conversation.messagingMode = messagingMode;
 
         if (groupAvatar) {
-            conversation.groupAvatar = `/uploads/chat/${groupAvatar.filename}`;
+            const result = await uploadToCloudinary(groupAvatar.buffer, "group_avatars");
+            conversation.groupAvatar = result.secure_url;
         } else if (removeAvatar === "true") {
             conversation.groupAvatar = "";
         }

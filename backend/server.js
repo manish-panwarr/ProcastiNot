@@ -22,6 +22,7 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
     process.env.FRONTEND_URL,
+    process.env.CLIENT_URL,
 ].filter(Boolean);
 
 //  origin checker 

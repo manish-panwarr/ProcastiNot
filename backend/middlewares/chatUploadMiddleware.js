@@ -1,15 +1,7 @@
 const multer = require("multer");
-const path = require("path");
 
-// Configure storage engine
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, `${Date.now()}-${file.originalname}`);
-    },
-});
+// Configure storage engine to memory
+const storage = multer.memoryStorage();
 
 // File filter
 const fileFilter = (req, file, cb) => {
@@ -32,7 +24,8 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage,
     fileFilter,
-    limits: { fileSize: 500 * 1024 * 1024 } // 500MB limit
+    limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit is safer for memory, Cloudinary fee tier might have limits
 });
 
 module.exports = upload;
+

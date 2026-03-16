@@ -9,12 +9,31 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const storage = multer.diskStorage({
-    filename: function (req, file, cb) {
-        cb(null, file.originalname);
-    },
-});
+/**
+ * Uploads a file buffer to Cloudinary using a stream.
+ * @param {Buffer} fileBuffer - The file content as a buffer.
+ * @param {string} folder - The folder to upload to in Cloudinary.
+ * @param {string} resourceType - 'auto', 'image', 'video', or 'raw' (for PDFs/docs).
+ * @returns {Promise<object>} - The Cloudinary upload result.
+ */
+const uploadToCloudinary = (fileBuffer, folder = "task-manager", resourceType = "auto") => {
+    return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+            { 
+                folder, 
+                resource_type: resourceType,
+                // For PDFs and other files, 'raw' is sometimes better, but 'auto' works for most.
+            },
+            (error, result) => {
+                if (error) return reject(error);
+                resolve(result);
+            }
+        );
+        uploadStream.end(fileBuffer);
+    });
+};
 
+const storage = multer.memoryStorage(); // Use memory storage for Cloudinary uploads
 const upload = multer({ storage: storage });
 
-module.exports = { cloudinary, upload };
+module.exports = { cloudinary, upload, uploadToCloudinary };

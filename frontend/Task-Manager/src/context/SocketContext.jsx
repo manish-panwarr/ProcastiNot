@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useRef, useCallb
 import ReactDOM from "react-dom";
 import io from "socket.io-client";
 import { UserContext } from "./userContext";
+import { BASE_URL } from "../utils/apiPaths";
 
 const SocketContext = createContext();
 
@@ -127,7 +128,7 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
-        const newSocket = io(window.location.origin, {
+        const newSocket = io(BASE_URL, {
             path: "/socket.io",
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
@@ -178,11 +179,10 @@ export const SocketProvider = ({ children }) => {
                 }
                 if (!preview) preview = 'Sent you a message';
 
-                const BASE = import.meta.env.VITE_BASE_URL || '';
                 const avatarUrl = msg.sender?.profileImageUrl
                     ? (msg.sender.profileImageUrl.startsWith('http')
                         ? msg.sender.profileImageUrl
-                        : `${BASE}${msg.sender.profileImageUrl}`)
+                        : `${BASE_URL}${msg.sender.profileImageUrl}`)
                     : null;
 
                 setNotif({

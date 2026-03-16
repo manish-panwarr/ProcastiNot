@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useContext } from 'react';
 import { getInitials } from '../../utils/helper';
 import axiosInstance from '../../utils/axiosInstance';
+import { BASE_URL } from '../../utils/apiPaths';
 
 const formatTime = (dateStr) => {
     if (!dateStr) return '';
@@ -19,7 +20,6 @@ const truncate = (str, n = 30) => {
 };
 
 const Avatar = ({ name, imageUrl, size = 44, online = false, isGroup = false }) => {
-    const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
     const finalUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `${BASE_URL}${imageUrl}`) : null;
 
     return (

@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import axiosInstance from '../../utils/axiosInstance';
 import { useSocket } from '../../context/SocketContext';
 import { useWebRTC } from '../../context/WebRTCContext';
+import { BASE_URL } from '../../utils/apiPaths';
 import { getInitials } from '../../utils/helper';
 import ChatContextMenu from './ChatContextMenu';
 import ConfirmDialog from './ConfirmDialog';
@@ -421,9 +422,8 @@ const FileBubble = ({ fileTransfer, isMe, isP2P = false, allImages, imageIndex =
     const { fileName, fileSize, fileType, mediaUrl } = fileTransfer || {};
     const category = getFileCategory(fileType, fileName);
     const meta = FILE_META[category] || FILE_META.other;
-    const BASE = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
     const src = mediaUrl
-        ? (mediaUrl.startsWith('http') || mediaUrl.startsWith('data:') ? mediaUrl : `${BASE}${mediaUrl}`)
+        ? (mediaUrl.startsWith('http') || mediaUrl.startsWith('data:') ? mediaUrl : `${BASE_URL}${mediaUrl}`)
         : null;
 
     const handleDownload = async (e, url, name) => {
@@ -696,7 +696,6 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
     const { sendP2PMessage, p2pMessages, clearP2PMessages } = useWebRTC();
     const { addToast, ToastContainer } = useToast();
 
-    const BASE_URL = import.meta.env.VITE_BASE_URL || 'http://localhost:5000';
     const getFullUrl = (path) => {
         if (!path) return '';
         return path.startsWith('http') ? path : `${BASE_URL}${path}`;
