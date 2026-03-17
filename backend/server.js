@@ -22,12 +22,18 @@ const server = http.createServer(app);
 
 const allowedOrigins = [
     process.env.CLIENT_URL,
-
+    "http://localhost:5173",
+    "http://localhost:5174",
 ].filter(Boolean);
 
 //  origin checker 
 function isOriginAllowed(origin) {
-    return true; // Allow all origins to prevent CORS issues with Vercel and Socket.io
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return true;
+    // Allow all Vercel preview deployments + configured origins
+    if (allowedOrigins.some(o => o && origin.startsWith(o))) return true;
+    if (origin.endsWith(".vercel.app")) return true;
+    return false;
 }
 
 const corsOptions = {
@@ -67,6 +73,14 @@ const io = new Server(server, {
         credentials: true,
         methods: ["GET", "POST"],
     },
+    // ✅ Production-critical settings for Render
+    transports: ["polling", "websocket"],   // polling FIRST so initial handshake works on Render
+    allowEIO3: true,                         // compatibility with older socket.io-client versions
+    pingTimeout: 60000,                      // 60s — keep connection alive on Render's free tier
+    pingInterval: 25000,                     // ping every 25s to prevent Render from sleeping
+    upgradeTimeout: 30000,                   // 30s to upgrade from polling → websocket
+    maxHttpBufferSize: 1e8,                  // 100 MB buffer for file transfers
+    connectTimeout: 45000,                   // 45s connection timeout
 });
 
 app.set("io", io);

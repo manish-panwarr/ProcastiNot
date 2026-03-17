@@ -2,7 +2,12 @@ const onlineUsers = new Map(); // userId -> socketId
 
 module.exports = (io) => {
     io.on("connection", (socket) => {
-        console.log("A user connected:", socket.id);
+        console.log("✅ User connected:", socket.id, "| transport:", socket.conn.transport.name);
+
+        // ✅ Keep-alive: respond to client pings so Render doesn't drop idle connections
+        socket.on("ping_server", () => {
+            socket.emit("pong_server");
+        });
 
         // --- PRESENCE SYSTEM ---
         socket.on("register_user", (userId) => {

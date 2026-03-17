@@ -123,52 +123,82 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
+        // ✅ Always destroy stale/disconnected socket before creating new one
         if (socketRef.current) {
-            if (!socketRef.current.connected) socketRef.current.connect();
-            return;
+            if (socketRef.current.connected) return; // already live → do nothing
+            // Socket exists but is dead — destroy it so we can create a fresh one
+            socketRef.current.removeAllListeners();
+            socketRef.current.disconnect();
+            socketRef.current = null;
         }
+
+        // ✅ Get JWT token for socket auth (needed on Render to identify user on handshake)
+        const token = localStorage.getItem("token");
 
         const newSocket = io(BASE_URL, {
             path: "/socket.io",
-            reconnectionAttempts: 10,
+            // ✅ CRITICAL for Render: polling FIRST, then upgrade to websocket
+            // Render blocks direct WebSocket before HTTP handshake completes
+            transports: ["polling", "websocket"],
+            withCredentials: true,               // ✅ Required for CORS with credentials
+            reconnection: true,
+            reconnectionAttempts: Infinity,      // ✅ Always try to reconnect
             reconnectionDelay: 1000,
-            transports: ['websocket', 'polling'],
+            reconnectionDelayMax: 5000,
+            timeout: 45000,                      // ✅ Match server connectTimeout
+            // ✅ Send auth token so server can identify user during handshake
+            auth: token ? { token } : {},
         });
+
         socketRef.current = newSocket;
         setSocket(newSocket);
 
         newSocket.on("connect", () => {
-            //   console.log("Socket connected:", newSocket.id);
+            console.log("✅ Socket connected:", newSocket.id, "| transport:", newSocket.io.engine.transport.name);
             newSocket.emit("register_user", user._id);
         });
-        newSocket.on("reconnect", () => {
+
+        // ✅ Re-register on ANY reconnect attempt (covers network drops, Render sleep wakes)
+        newSocket.on("reconnect", (attemptNumber) => {
+            console.log(`🔄 Socket reconnected after ${attemptNumber} attempts`);
             newSocket.emit("register_user", user._id);
         });
+
+        newSocket.on("reconnect_attempt", (attemptNumber) => {
+            console.log(`🔁 Reconnect attempt #${attemptNumber}`);
+        });
+
         newSocket.on("disconnect", (reason) => {
-            if (reason === "io server disconnect") newSocket.connect();
+            console.warn("⚠️ Socket disconnected:", reason);
+            // If server forcefully disconnects, manually reconnect
+            if (reason === "io server disconnect") {
+                newSocket.connect();
+            }
+            // For all other reasons (transport close, ping timeout, etc.)
+            // socket.io auto-reconnects because reconnection: true
         });
+
         newSocket.on("connect_error", (err) => {
-            // console.error("Socket error:", err.message);
+            console.error("❌ Socket connect_error:", err.message);
         });
+
         newSocket.on("get_online_users", (users) => {
             setOnlineUsers(users);
         });
 
-        // Global new-message listener 
+        // Global new-message listener
         newSocket.on("conversation_updated", (data) => {
             const msg = data.lastMessage;
             if (!msg) return;
             const senderId = msg.sender?._id || msg.sender;
-            if (senderId === user._id) return; // Khud ke messages ignore
+            if (senderId === user._id) return; // Ignore own messages
 
             // Only increment unread + show toast if NOT currently on /chat
             const onChat = window.location.pathname.startsWith('/chat');
 
             if (!onChat) {
-                // Increment global unread count
                 setUnreadCounts(prev => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
 
-                // Build preview text
                 let preview = msg.text || '';
                 if (!preview && msg.fileTransfer?.fileName) {
                     const ft = msg.fileTransfer;
@@ -194,17 +224,22 @@ export const SocketProvider = ({ children }) => {
             }
         });
 
+        // ✅ Keep-alive ping every 20s to prevent Render from dropping idle connections
+        // Render's free tier disconnects anything idle for >30s
+        const keepAliveInterval = setInterval(() => {
+            if (newSocket.connected) {
+                newSocket.emit("ping_server");
+            }
+        }, 20000);
+
         return () => {
-            newSocket.off("connect");
-            newSocket.off("reconnect");
-            newSocket.off("disconnect");
-            newSocket.off("get_online_users");
-            newSocket.off("conversation_updated");
+            clearInterval(keepAliveInterval);
+            newSocket.removeAllListeners();
             newSocket.disconnect();
             socketRef.current = null;
             setSocket(null);
         };
-    }, [user]);
+    }, [user?._id]);  // ✅ Depend on user._id not user object — prevents re-running on unrelated re-renders
 
     const handleNotifOpen = () => {
         setNotif(null);
