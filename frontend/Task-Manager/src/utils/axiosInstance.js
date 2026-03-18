@@ -3,7 +3,7 @@ import { BASE_URL } from "./apiPaths";
 
 const axiosInstance = axios.create({
     baseURL: BASE_URL,
-    timeout: 10000,
+    timeout: 30000, // 30s default timeout
     headers: {
         "Content-Type": "application/json",
         "ngrok-skip-browser-warning": "true",
@@ -17,14 +17,19 @@ axiosInstance.interceptors.request.use(
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
         }
+
+        // Auto-increase timeout for file uploads (multipart/form-data)
+        const contentType = config.headers["Content-Type"] || config.headers["content-type"] || "";
+        if (contentType.includes("multipart/form-data") || config.data instanceof FormData) {
+            config.timeout = 120000; // 2 minutes for uploads
+        }
+
         return config;
     },
     (error) => {
         return Promise.reject(error);
     }
 );
-
-
 
 // Response Interceptor
 axiosInstance.interceptors.response.use(

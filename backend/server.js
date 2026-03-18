@@ -21,9 +21,11 @@ const server = http.createServer(app);
 /* CORS CONFIG  */
 
 const allowedOrigins = [
+    "https://2d7c-2409-40d2-3048-33c9-d16c-60d7-41f2-5593.ngrok-free.app",
     process.env.CLIENT_URL,
     "http://localhost:5173",
     "http://localhost:5174",
+
 ].filter(Boolean);
 
 //  origin checker 

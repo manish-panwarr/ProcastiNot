@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import Peer from "simple-peer";
 import { useSocket } from "./SocketContext";
 import { UserContext } from "./userContext";
@@ -6,8 +6,8 @@ import { UserContext } from "./userContext";
 const WebRTCContext = createContext();
 export const useWebRTC = () => useContext(WebRTCContext);
 
-//  chunking constants 
-const CHUNK_SIZE = 16 * 1024; // 16 KB per chunk (safe for all browsers)
+// Chunking constants
+const CHUNK_SIZE = 16 * 1024; // 16 KB per chunk
 
 function splitBase64(b64, size) {
     const chunks = [];
@@ -29,38 +29,49 @@ export const WebRTCProvider = ({ children }) => {
     useEffect(() => { socketRef.current = socket; }, [socket]);
     useEffect(() => { userRef.current = user; }, [user]);
 
-    //  add to local state 
-    const addMessage = (peerUserId, msg) => {
+    // Add to local state
+    const addMessage = useCallback((peerUserId, msg) => {
         const id = String(peerUserId);
         setP2pMessages(prev => ({
             ...prev,
             [id]: [...(prev[id] || []), msg],
         }));
-    };
+    }, []);
 
-    const clearP2PMessages = (peerUserId) => {
+    const clearP2PMessages = useCallback((peerUserId) => {
         const id = String(peerUserId);
         setP2pMessages(prev => {
             const copy = { ...prev };
             delete copy[id];
             return copy;
         });
-    };
+    }, []);
 
-    //  peer lifecycle 
-    const destroyPeer = (targetId) => {
-        if (peersRef.current[targetId]) {
-            try { peersRef.current[targetId].destroy(); } catch (_) { }
-            delete peersRef.current[targetId];
+    // Force-destroy a peer (safe to call even if already destroyed)
+    const destroyPeer = useCallback((targetId) => {
+        const id = String(targetId);
+        if (peersRef.current[id]) {
+            try { peersRef.current[id].destroy(); } catch (_) { }
+            delete peersRef.current[id];
         }
-        delete assemblyRef.current[targetId];
-    };
+        delete assemblyRef.current[id];
+    }, []);
 
-    const createPeer = (targetId, isInitiator) => {
-        // destroy stale peer if destroyed
-        const existing = peersRef.current[targetId];
-        if (existing && !existing.destroyed) return existing;
-        if (existing) delete peersRef.current[targetId];
+    // Create (or return existing live) peer
+    const createPeer = useCallback((targetId, isInitiator) => {
+        const id = String(targetId);
+
+        // If existing peer is alive and connected, return it
+        const existing = peersRef.current[id];
+        if (existing && !existing.destroyed && existing.connected) {
+            return existing;
+        }
+
+        // Clean up stale peer before creating a new one
+        if (existing) {
+            try { existing.destroy(); } catch (_) { }
+            delete peersRef.current[id];
+        }
 
         const peer = new Peer({
             initiator: isInitiator,
@@ -70,9 +81,6 @@ export const WebRTCProvider = ({ children }) => {
                     { urls: 'stun:stun.l.google.com:19302' },
                     { urls: 'stun:stun1.l.google.com:19302' },
                     { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                    { urls: 'stun:global.stun.twilio.com:3478' },
                     {
                         urls: "turn:openrelay.metered.ca:80",
                         username: "openrelayproject",
@@ -88,48 +96,43 @@ export const WebRTCProvider = ({ children }) => {
                         username: "openrelayproject",
                         credential: "openrelayproject"
                     },
-                    // Fallback to a Twilio Network Traversal STUN/TURN if metered gets rate limited:
-                    { urls: 'stun:global.stun.twilio.com:3478' }
                 ],
             },
         });
 
         peer.on('signal', (signal) => {
             const sock = socketRef.current;
-            const meStr = String(userRef.current?._id);
-            const targetStr = String(targetId);
-            if (sock && meStr && meStr !== "undefined") {
+            const meStr = String(userRef.current?._id || '');
+            const targetStr = String(id);
+            if (sock && meStr && meStr !== "undefined" && sock.connected) {
                 sock.emit('p2p_signal', { to: targetStr, from: meStr, signal });
             }
         });
 
         peer.on('connect', () => {
-            console.log(`P2P connected with ${targetId}`);
+            console.log(`P2P connected with ${id}`);
         });
 
-        //  receive data (with chunk reassembly)     
+        // Receive data with chunk reassembly
         peer.on('data', (rawData) => {
             let parsed;
             try { parsed = JSON.parse(rawData.toString()); } catch { return; }
 
             if (parsed.type === 'chunk') {
-                // file chunk
                 const { msgId, index, total, data, meta } = parsed;
-                if (!assemblyRef.current[targetId]) assemblyRef.current[targetId] = {};
-                const bin = assemblyRef.current[targetId];
+                if (!assemblyRef.current[id]) assemblyRef.current[id] = {};
+                const bin = assemblyRef.current[id];
                 if (!bin[msgId]) bin[msgId] = { chunks: [], total, meta };
                 bin[msgId].chunks[index] = data;
 
-                // all chunks received?
                 const received = bin[msgId].chunks.filter(Boolean).length;
                 if (received === total) {
                     const complete = bin[msgId].chunks.join('');
                     delete bin[msgId];
-                    // small delay to avoid UI freeze on large text processing
                     setTimeout(() => {
-                        addMessage(targetId, {
+                        addMessage(id, {
                             id: msgId,
-                            senderId: targetId,
+                            senderId: id,
                             timestamp: new Date().toISOString(),
                             file: { ...meta, data: complete },
                             isP2P: true,
@@ -137,36 +140,50 @@ export const WebRTCProvider = ({ children }) => {
                     }, 10);
                 }
             } else if (parsed.type === 'message') {
-
-                addMessage(targetId, { ...parsed, isP2P: true });
+                addMessage(id, { ...parsed, isP2P: true });
             }
         });
 
         peer.on('error', (err) => {
-            console.error(`P2P error with ${targetId}:`, err.message);
-            destroyPeer(targetId);
+            console.error(`P2P error with ${id}:`, err.message);
+            destroyPeer(id);
         });
 
         peer.on('close', () => {
-            console.log(`P2P closed with ${targetId}`);
-            destroyPeer(targetId);
+            console.log(`P2P closed with ${id}`);
+            destroyPeer(id);
         });
 
-        peersRef.current[targetId] = peer;
+        peersRef.current[id] = peer;
         return peer;
-    };
+    }, [addMessage, destroyPeer]);
 
-    //  incoming signals 
+    // Handle incoming WebRTC signals from the server
     useEffect(() => {
         if (!socket || !user) return;
 
         const onSignal = ({ signal, from }) => {
             const fromStr = String(from);
             let peer = peersRef.current[fromStr];
+
+            // Always create a fresh non-initiator peer if the existing one is dead
             if (!peer || peer.destroyed) {
                 peer = createPeer(fromStr, false);
             }
-            try { peer.signal(signal); } catch (e) { console.error('p2p signal err', e); }
+
+            try {
+                peer.signal(signal);
+            } catch (e) {
+                console.error('p2p signal err — recreating peer', e);
+                // Destroy stale peer and retry with fresh one
+                destroyPeer(fromStr);
+                try {
+                    const freshPeer = createPeer(fromStr, false);
+                    freshPeer.signal(signal);
+                } catch (e2) {
+                    console.error('p2p signal retry failed', e2);
+                }
+            }
         };
 
         const onUnavailable = ({ userId }) => {
@@ -176,18 +193,23 @@ export const WebRTCProvider = ({ children }) => {
 
         socket.on('p2p_signal', onSignal);
         socket.on('p2p_unavailable', onUnavailable);
+
         return () => {
             socket.off('p2p_signal', onSignal);
             socket.off('p2p_unavailable', onUnavailable);
         };
+    }, [socket, user, createPeer, destroyPeer]);
 
-    }, [socket, user]);
-
-    //   send P2P message / file                  
-    const sendP2PMessage = async (targetId, text, file = null) => {
+    // Send P2P text message or file
+    const sendP2PMessage = useCallback(async (targetId, text, file = null) => {
         targetId = String(targetId);
-        if (!onlineUsers.includes(targetId) && !peersRef.current[targetId]) {
-            throw new Error('User is offline');
+
+        // Proper online check using String() comparison
+        const isOnline = Array.isArray(onlineUsers) && onlineUsers.some(uid => String(uid) === targetId);
+        const hasPeer = !!(peersRef.current[targetId] && !peersRef.current[targetId].destroyed);
+
+        if (!isOnline && !hasPeer) {
+            throw new Error('User is offline. Cannot use P2P mode.');
         }
 
         let peer = peersRef.current[targetId];
@@ -195,15 +217,23 @@ export const WebRTCProvider = ({ children }) => {
             peer = createPeer(targetId, true);
         }
 
-        // wait for connection
+        // Wait for DataChannel to be fully open
         if (!peer.connected) {
             await new Promise((resolve, reject) => {
-                const onConnect = () => { off(); setTimeout(resolve, 200); }; // Wait 200ms to ensure DataChannel is fully open
-                const onErr = (e) => { off(); reject(e); };
-                const off = () => { peer.off('connect', onConnect); peer.off('error', onErr); };
+                const onConnect = () => { cleanup(); setTimeout(resolve, 100); };
+                const onErr = (e) => { cleanup(); reject(new Error(`P2P connection failed: ${e.message}`)); };
+                const cleanup = () => {
+                    peer.off('connect', onConnect);
+                    peer.off('error', onErr);
+                    clearTimeout(timer);
+                };
                 peer.on('connect', onConnect);
                 peer.on('error', onErr);
-                setTimeout(() => { off(); reject(new Error('P2P connection timed out')); }, 30000);
+                // 45 second timeout — accounts for TURN relay + Render cold starts
+                const timer = setTimeout(() => {
+                    cleanup();
+                    reject(new Error('P2P timed out. Please try again or disable P2P mode.'));
+                }, 45000);
             });
         }
 
@@ -212,7 +242,7 @@ export const WebRTCProvider = ({ children }) => {
         const timestamp = new Date().toISOString();
 
         if (file) {
-            // convert to base64 then send in 16 KB chunks
+            // Convert file to base64, then send in 16KB chunks over DataChannel
             const base64 = await new Promise((res, rej) => {
                 const r = new FileReader();
                 r.onload = () => res(r.result);
@@ -225,12 +255,15 @@ export const WebRTCProvider = ({ children }) => {
             const total = chunks.length;
 
             for (let index = 0; index < total; index++) {
+                if (peer.destroyed) throw new Error('P2P connection lost during file transfer');
                 peer.send(JSON.stringify({ type: 'chunk', msgId, index, total, data: chunks[index], meta }));
+                // Throttle every 10 chunks to avoid overwhelming the DataChannel buffer
                 if (index % 10 === 0) {
                     await new Promise(r => setTimeout(r, 10));
                 }
             }
 
+            // Also show the file locally for the sender
             addMessage(targetId, {
                 id: msgId, senderId, timestamp,
                 file: { ...meta, data: base64 },
@@ -238,14 +271,15 @@ export const WebRTCProvider = ({ children }) => {
             });
 
         } else if (text?.trim()) {
+            if (peer.destroyed) throw new Error('P2P connection lost');
             const payload = { type: 'message', id: msgId, senderId, timestamp, text: text.trim() };
             peer.send(JSON.stringify(payload));
             addMessage(targetId, { ...payload, isP2P: true });
         }
-    };
+    }, [onlineUsers, createPeer, addMessage]);
 
     return (
-        <WebRTCContext.Provider value={{ sendP2PMessage, p2pMessages, clearP2PMessages }}>
+        <WebRTCContext.Provider value={{ sendP2PMessage, p2pMessages, clearP2PMessages, destroyPeer }}>
             {children}
         </WebRTCContext.Provider>
     );

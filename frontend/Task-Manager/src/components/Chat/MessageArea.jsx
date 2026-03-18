@@ -821,38 +821,42 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
 
         const handleP2pRequest = ({ senderId, senderName }) => {
             setConfirmDialog({
-                title: `${senderName} wants to chat privately!`,
-                body: 'Do you want to enable P2P mode?',
-                confirmText: 'P2P ON',
+                title: `${senderName} wants to connect privately (P2P)`,
+                body: 'Accept to enable encrypted direct chat. Your messages will bypass the server.',
+                confirmText: 'Accept P2P',
                 confirmStyle: 'primary',
                 onConfirm: () => {
                     setConfirmDialog(null);
-                    if (!isGroup && selectedUser && selectedUser._id === senderId) {
-                        setUseP2P(true);
-                    }
+                    // Enable P2P mode on the recipient side
+                    setUseP2P(true);
+                    // Tell sender we accepted
                     socket.emit('accept_p2p', { senderId });
-                    addToast('P2P enabled!', 'success');
+                    addToast('P2P connection accepted! Establishing secure connection...', 'success');
                 },
                 onCancel: () => {
                     setConfirmDialog(null);
                     socket.emit('reject_p2p', { senderId });
+                    addToast('P2P request declined', 'info');
                 }
             });
         };
 
         const handleP2pAccepted = () => {
             setUseP2P(true);
-            addToast('P2P request accepted! Chat is now private.', 'success');
+            addToast('P2P accepted! You are now in private mode.', 'success');
+            // Sender side: initiate WebRTC peer now that recipient accepted
+            // The actual WebRTC handshake starts when first sendP2PMessage is called
+            // (which calls createPeer(targetId, true) internally)
         };
 
         const handleP2pRejected = () => {
             setUseP2P(false);
-            addToast("Receiver doesn't want to chat in P2P", 'error');
+            addToast('P2P request was declined by the other user.', 'error');
         };
 
         const handleP2pCancelled = () => {
             setUseP2P(false);
-            addToast("P2P mode was cancelled by the sender", 'info');
+            addToast('P2P mode was turned off by the other user.', 'info');
         };
 
         socket.on("receive_message", handleReceiveMessage);

@@ -71,9 +71,14 @@ const ProfileInfoPanel = ({
         };
 
         const handleNewMessage = (msg) => {
-            if (msg.conversationId === conversationId && msg.fileTransfer && msg.fileTransfer.mediaUrl && msg.fileTransfer.status === "complete") {
-                setSharedFiles(prev => {
-                    if (prev.some(m => m._id === msg._id)) return prev;
+            if (
+                msg.conversationId === conversationId &&
+                msg.fileTransfer &&
+                msg.fileTransfer.mediaUrl &&
+                msg.fileTransfer.status === "complete"
+            ) {
+                setSharedFiles((prev) => {
+                    if (prev.some((m) => m._id === msg._id)) return prev;
                     return [msg, ...prev]; // Latest first
                 });
             }

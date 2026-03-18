@@ -123,7 +123,7 @@ export const SocketProvider = ({ children }) => {
             return;
         }
 
-        // ✅ Always destroy stale/disconnected socket before creating new one
+        //Always destroy stale/disconnected socket before creating new one
         if (socketRef.current) {
             if (socketRef.current.connected) return; // already live → do nothing
             // Socket exists but is dead — destroy it so we can create a fresh one
@@ -132,21 +132,18 @@ export const SocketProvider = ({ children }) => {
             socketRef.current = null;
         }
 
-        // ✅ Get JWT token for socket auth (needed on Render to identify user on handshake)
+        // Get JWT token for socket auth (needed on Render to identify user on handshake)
         const token = localStorage.getItem("token");
 
         const newSocket = io(BASE_URL, {
             path: "/socket.io",
-            // ✅ CRITICAL for Render: polling FIRST, then upgrade to websocket
-            // Render blocks direct WebSocket before HTTP handshake completes
             transports: ["polling", "websocket"],
-            withCredentials: true,               // ✅ Required for CORS with credentials
+            withCredentials: true,
             reconnection: true,
-            reconnectionAttempts: Infinity,      // ✅ Always try to reconnect
+            reconnectionAttempts: Infinity,
             reconnectionDelay: 1000,
             reconnectionDelayMax: 5000,
-            timeout: 45000,                      // ✅ Match server connectTimeout
-            // ✅ Send auth token so server can identify user during handshake
+            timeout: 45000,
             auth: token ? { token } : {},
         });
 
@@ -154,22 +151,22 @@ export const SocketProvider = ({ children }) => {
         setSocket(newSocket);
 
         newSocket.on("connect", () => {
-            console.log("✅ Socket connected:", newSocket.id, "| transport:", newSocket.io.engine.transport.name);
+            console.log("Socket connected:", newSocket.id, "| transport:", newSocket.io.engine.transport.name);
             newSocket.emit("register_user", user._id);
         });
 
-        // ✅ Re-register on ANY reconnect attempt (covers network drops, Render sleep wakes)
+        // Re-register on ANY reconnect attempt (covers network drops, Render sleep wakes)
         newSocket.on("reconnect", (attemptNumber) => {
-            console.log(`🔄 Socket reconnected after ${attemptNumber} attempts`);
+            console.log(`Socket reconnected after ${attemptNumber} attempts`);
             newSocket.emit("register_user", user._id);
         });
 
         newSocket.on("reconnect_attempt", (attemptNumber) => {
-            console.log(`🔁 Reconnect attempt #${attemptNumber}`);
+            console.log(`Reconnect attempt #${attemptNumber}`);
         });
 
         newSocket.on("disconnect", (reason) => {
-            console.warn("⚠️ Socket disconnected:", reason);
+            console.warn("Socket disconnected:", reason);
             // If server forcefully disconnects, manually reconnect
             if (reason === "io server disconnect") {
                 newSocket.connect();
@@ -186,26 +183,37 @@ export const SocketProvider = ({ children }) => {
             setOnlineUsers(users);
         });
 
-        // Global new-message listener
+        // Global new-message listener — fires for every participant on every new message
         newSocket.on("conversation_updated", (data) => {
             const msg = data.lastMessage;
             if (!msg) return;
-            const senderId = msg.sender?._id || msg.sender;
-            if (senderId === user._id) return; // Ignore own messages
 
-            // Only increment unread + show toast if NOT currently on /chat
+            // Normalize IDs to string for safe comparison
+            const senderId = String(msg.sender?._id || msg.sender || '');
+            const myId = String(user._id);
+            if (senderId === myId) return; // Ignore own messages
+
+            const convId = String(data.conversationId || '');
+
+            // Only show toast + increment unread if NOT already viewing this conversation
+            const onThisConv = window.location.pathname.startsWith('/chat') &&
+                window.location.search.includes(convId);
+            // Also skip if on /chat but no specific conv in URL (general chat page case handled by chat component)
             const onChat = window.location.pathname.startsWith('/chat');
 
-            if (!onChat) {
-                setUnreadCounts(prev => ({ ...prev, [senderId]: (prev[senderId] || 0) + 1 }));
+            if (!onThisConv) {
+                // Key unread by conversationId so it matches with clearUnread calls
+                setUnreadCounts(prev => ({ ...prev, [convId]: (prev[convId] || 0) + 1 }));
+            }
 
+            if (!onChat) {
                 let preview = msg.text || '';
                 if (!preview && msg.fileTransfer?.fileName) {
                     const ft = msg.fileTransfer;
-                    if (/image/i.test(ft.fileType)) preview = '📷 Photo';
-                    else if (/video/i.test(ft.fileType)) preview = '🎥 Video';
-                    else if (/audio/i.test(ft.fileType)) preview = '🎵 Audio';
-                    else preview = `📎 ${ft.fileName}`;
+                    if (/image/i.test(ft.fileType)) preview = 'Photo';
+                    else if (/video/i.test(ft.fileType)) preview = 'Video';
+                    else if (/audio/i.test(ft.fileType)) preview = 'Audio';
+                    else preview = ft.fileName;
                 }
                 if (!preview) preview = 'Sent you a message';
 
@@ -220,6 +228,7 @@ export const SocketProvider = ({ children }) => {
                     preview: preview.slice(0, 60),
                     avatar: avatarUrl,
                     senderId,
+                    convId,
                 });
             }
         });

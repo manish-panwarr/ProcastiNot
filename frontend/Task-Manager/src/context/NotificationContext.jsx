@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
 import axiosInstance from '../utils/axiosInstance';
 import { useSocket } from './SocketContext';
 import { UserContext } from './userContext';
@@ -12,13 +12,7 @@ export const NotificationProvider = ({ children }) => {
     const { socket } = useSocket();
     const { user } = useContext(UserContext);
 
-    useEffect(() => {
-        if (user) {
-            fetchNotifications();
-        }
-    }, [user]);
-
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         try {
             const res = await axiosInstance.get('/api/notifications');
             setNotifications(res.data);
@@ -27,16 +21,47 @@ export const NotificationProvider = ({ children }) => {
         } catch (error) {
             console.error('Failed to fetch notifications', error);
         }
-    };
+    }, []);
 
+    // Fetch on login / logout
     useEffect(() => {
-        if (!socket) return;
+        if (user) {
+            fetchNotifications();
+        } else {
+            setNotifications([]);
+            setUnreadCount(0);
+        }
+    }, [user, fetchNotifications]);
+
+    // Re-fetch when socket reconnects (catches missed notifications during disconnect gap)
+    useEffect(() => {
+        if (!socket || !user) return;
+
+        const onConnect = () => {
+            fetchNotifications();
+        };
+
+        socket.on('connect', onConnect);
+        socket.on('reconnect', onConnect);
+
+        return () => {
+            socket.off('connect', onConnect);
+            socket.off('reconnect', onConnect);
+        };
+    }, [socket, user, fetchNotifications]);
+
+    // Real-time notification listener
+    useEffect(() => {
+        if (!socket || !user) return;
 
         const handleNewNotification = (notification) => {
-            setNotifications((prev) => [notification, ...prev]);
+            setNotifications((prev) => {
+                // Prevent duplicate notifications
+                if (prev.some(n => n._id === notification._id)) return prev;
+                return [notification, ...prev];
+            });
             setUnreadCount((prev) => prev + 1);
-            
-            // Show toast notification
+
             toast.success(notification.message, {
                 position: 'top-right',
                 duration: 5000,
@@ -65,7 +90,7 @@ export const NotificationProvider = ({ children }) => {
             socket.off('new_notification', handleNewNotification);
             socket.off('notifications_deleted', handleNotificationsDeleted);
         };
-    }, [socket]);
+    }, [socket, user]);
 
     const markAsRead = async (id) => {
         try {
