@@ -1,0 +1,128 @@
+import {
+    LuLayoutDashboard,
+    LuUsers,
+    LuClipboardCheck,
+    LuSquarePlus,
+    LuLogOut,
+    LuMessageSquare,
+} from "react-icons/lu";
+
+
+//@desc : Sidebar menu data for admin
+//@return : Array of objects
+export const SIDE_MENU_DATA = [
+    {
+        id: "01",
+        label: "Dashboard",
+        icon: LuLayoutDashboard,
+        path: "/admin/dashboard",
+    },
+    {
+        id: "02",
+        label: "Manage Tasks",
+        icon: LuClipboardCheck,
+        path: "/admin/tasks",
+    },
+    {
+        id: "03",
+        label: "Add Task",
+        icon: LuSquarePlus,
+        path: "/admin/create-task",
+    },
+    {
+        id: "04",
+        label: "Team Members",
+        icon: LuUsers,
+        path: "/admin/users",
+    },
+    {
+        id: "05",
+        label: "Admins",
+        icon: LuUsers,
+        path: "/admin/admins",
+    },
+    {
+        id: "06",
+        label: "Chat",
+        icon: LuMessageSquare,
+        path: "/chat",
+    },
+    {
+        id: "07",
+        label: "Logout",
+        icon: LuLogOut,
+        path: "/logout",
+    },
+];
+
+
+//@desc : Sidebar menu data for user
+//@return : Array of objects
+export const SIDE_MENU_USER_DATA = [
+    {
+        id: "01",
+        label: "Dashboard",
+        icon: LuLayoutDashboard,
+        path: "/user/dashboard",
+    },
+    {
+        id: "02",
+        label: "My Tasks",
+        icon: LuClipboardCheck,
+        path: "/user/tasks",
+    },
+    {
+        id: "03",
+        label: "Profile",
+        icon: LuUsers,
+        path: "/user/profile",
+    },
+    {
+        id: "04",
+        label: "Chat",
+        icon: LuMessageSquare,
+        path: "/chat",
+    },
+    {
+        id: "05",
+        label: "Logout",
+        icon: LuLogOut,
+        path: "/logout",
+    },
+
+];
+
+
+//@desc : Priority data for tasks
+//@return : Array of objects
+export const PRIORITY_DATA = [
+    { label: "Low", value: "Low" },
+    { label: "Medium", value: "Medium" },
+    { label: "High", value: "High" },
+]
+
+
+//@desc : Status data for tasks
+//@return : Array of objects
+export const STATUS_DATA = [
+    { label: "Pending", value: "Pending" },
+    { label: "In Progress", value: "In Progress" },
+    { label: "Completed", value: "Completed" },
+]
+
+
+//@desc : Task type data for tasks
+//@return : Array of objects
+export const TASK_TYPE_DATA = [
+    { label: "Personal", value: "Personal" },
+    { label: "Work", value: "Work" },
+    { label: "Other", value: "Other" },
+]
+
+
+//@desc : User Role Data for tasks
+//@return : Array of objects
+export const USER_DATA = [
+    { label: "Admin", value: "Admin" },
+    { label: "User", value: "User" },
+]

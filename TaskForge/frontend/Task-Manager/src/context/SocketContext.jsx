@@ -1,0 +1,300 @@
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
+import ReactDOM from "react-dom";
+import { io } from "socket.io-client";
+import { UserContext } from "./userContext";
+
+// Production-safe backend URL: prefer env var, fall back to the hosted instance.
+const BACKEND_URL =
+    import.meta.env.VITE_API_URL
+        ? import.meta.env.VITE_API_URL
+        : "https://procastinot-2jjb.onrender.com";
+
+const SocketContext = createContext();
+
+export const useSocket = () => useContext(SocketContext);
+
+
+// Chat notification toast (shown when a message arrives outside the chat page)
+
+const ChatNotifToast = ({ notif, onDismiss, onOpen }) => {
+    useEffect(() => {
+        const timer = setTimeout(onDismiss, 5000);
+        return () => clearTimeout(timer);
+    }, [onDismiss]);
+
+    return ReactDOM.createPortal(
+        <div
+            onClick={onOpen}
+            style={{
+                position: "fixed", bottom: "24px", right: "24px", zIndex: 999999,
+                display: "flex", alignItems: "center", gap: "12px",
+                background: "rgba(15,23,42,0.92)",
+                backdropFilter: "blur(16px)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: "16px",
+                padding: "12px 16px",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.4), 0 0 0 1px rgba(19,104,236,0.2)",
+                cursor: "pointer",
+                animation: "cnToastIn 0.32s cubic-bezier(.34,1.4,.64,1)",
+                maxWidth: "320px",
+                fontFamily: "'Poppins', sans-serif",
+            }}
+        >
+            {/* Sender avatar */}
+            <div style={{
+                width: "42px", height: "42px", borderRadius: "50%", flexShrink: 0,
+                background: "linear-gradient(135deg,#1368EC,#7c3aed)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: "15px", fontWeight: "700", color: "#fff",
+                boxShadow: "0 4px 12px rgba(19,104,236,0.4)",
+                overflow: "hidden",
+            }}>
+                {notif.avatar
+                    ? <img src={notif.avatar} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    : (notif.senderName?.[0] || "?").toUpperCase()
+                }
+            </div>
+
+            {/* Message preview */}
+            <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontWeight: "700", fontSize: "13px", color: "#fff", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {notif.senderName || "Someone"}
+                </p>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", color: "rgba(255,255,255,0.6)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {notif.preview || "Sent you a message"}
+                </p>
+            </div>
+
+            {/* Chat icon */}
+            <div style={{
+                width: "32px", height: "32px", borderRadius: "50%",
+                background: "rgba(19,104,236,0.2)", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"
+                        stroke="#1368EC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+            </div>
+
+            <button
+                onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+                style={{
+                    position: "absolute", top: "8px", right: "10px",
+                    background: "none", border: "none", color: "rgba(255,255,255,0.4)",
+                    cursor: "pointer", fontSize: "14px", lineHeight: 1, padding: 0,
+                }}
+            ></button>
+
+            {/* Auto-dismiss progress bar */}
+            <div style={{
+                position: "absolute", bottom: 0, left: 0, right: 0, height: "2px",
+                borderRadius: "0 0 16px 16px", background: "rgba(19,104,236,0.5)",
+                animation: "cnProgress 5s linear forwards",
+            }} />
+        </div>,
+        document.body
+    );
+};
+
+
+// Socket Provider
+export const SocketProvider = ({ children }) => {
+    const [socket, setSocket] = useState(null);
+    const [onlineUsers, setOnlineUsers] = useState([]);
+    const [unreadCounts, setUnreadCounts] = useState({});
+    const [notif, setNotif] = useState(null);
+    const [typingUsers, setTypingUsers] = useState({});
+    const socketRef = useRef(null);
+    const activeConvIdRef = useRef(null);
+    const { user } = useContext(UserContext) || {};
+
+    const totalUnread = Object.values(unreadCounts).reduce((sum, v) => sum + (v || 0), 0);
+
+    const clearUnread = useCallback((id) => {
+        setUnreadCounts((prev) => ({ ...prev, [id]: 0 }));
+    }, []);
+
+    const setInitialUnread = useCallback((counts) => {
+        setUnreadCounts(counts);
+    }, []);
+
+    // Socket lifecycle — recreated only when the logged-in user changes.
+    useEffect(() => {
+        if (!user) {
+            if (socketRef.current) {
+                socketRef.current.removeAllListeners();
+                socketRef.current.disconnect();
+                socketRef.current = null;
+                setSocket(null);
+                setOnlineUsers([]);
+            }
+            return;
+        }
+
+        // Destroy any previous socket before creating a new one.
+        if (socketRef.current) {
+            socketRef.current.removeAllListeners();
+            socketRef.current.disconnect();
+            socketRef.current = null;
+        }
+
+        console.log("[Socket] Connecting to:", BACKEND_URL);
+
+        const token = localStorage.getItem("token");
+
+        const newSocket = io(BACKEND_URL, {
+            path: "/socket.io",
+            // "polling" must come first for Render's reverse proxy; the client then
+            // upgrades to WebSocket automatically when the proxy supports it.
+            transports: ["polling", "websocket"],
+            withCredentials: true,
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 45000,
+            auth: token ? { token } : {},
+        });
+
+        socketRef.current = newSocket;
+        setSocket(newSocket);
+
+        newSocket.on("connect", () => {
+            console.log("Socket connected:", newSocket.id, "| transport:", newSocket.io.engine.transport.name);
+            newSocket.emit("register_user", user._id);
+        });
+
+        // Re-register after every reconnect (handles network drops and Render wake-ups).
+        newSocket.on("reconnect", (attempts) => {
+            console.log(`Socket reconnected after ${attempts} attempt(s)`);
+            newSocket.emit("register_user", user._id);
+        });
+
+        newSocket.on("disconnect", (reason) => {
+            console.warn("Socket disconnected:", reason);
+            // "io server disconnect" means the server kicked us; reconnect manually.
+            if (reason === "io server disconnect") newSocket.connect();
+        });
+
+        newSocket.on("connect_error", (err) => {
+            console.error("Socket connect_error:", err.message);
+        });
+
+        // Online presence
+        newSocket.on("get_online_users", (users) => setOnlineUsers(users));
+
+        // Typing indicators — server emits { conversationId, userId }
+        newSocket.on("user_typing", ({ userId }) => {
+            if (!userId) return;
+            setTypingUsers((prev) => ({ ...prev, [userId]: true }));
+        });
+
+        newSocket.on("user_stopped_typing", ({ userId }) => {
+            if (!userId) return;
+            setTypingUsers((prev) => {
+                const next = { ...prev };
+                delete next[userId];
+                return next;
+            });
+        });
+
+
+        newSocket.on("conversation_updated", (data) => {
+            const msg = data.lastMessage;
+            if (!msg) return;
+
+            const senderId = String(msg.sender?._id || msg.sender || "");
+            const myId = String(user._id);
+            if (senderId === myId) return; // Ignore own messages
+
+            const convId = String(data.conversationId || "");
+            const isCurrentlyViewing = activeConvIdRef.current === convId;
+            const onChatPage = window.location.pathname.startsWith("/chat");
+
+            // Only increment badge when the conversation is NOT currently open.
+            if (!isCurrentlyViewing) {
+                const isGroup = data.isGroup || (data.participants && data.participants.length > 2);
+                const key = isGroup ? convId : senderId;
+                setUnreadCounts((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
+            }
+
+            // Show a floating toast only when the user is NOT on the chat page at all.
+            if (!onChatPage) {
+                let preview = msg.text || "";
+                if (!preview && msg.fileTransfer?.fileName) {
+                    const ft = msg.fileTransfer;
+                    if (/image/i.test(ft.fileType)) preview = "📷 Photo";
+                    else if (/video/i.test(ft.fileType)) preview = "🎥 Video";
+                    else if (/audio/i.test(ft.fileType)) preview = "🎵 Audio";
+                    else preview = ft.fileName;
+                }
+                if (!preview) preview = "Sent you a message";
+
+                const avatarUrl = msg.sender?.profileImageUrl
+                    ? (msg.sender.profileImageUrl.startsWith("http")
+                        ? msg.sender.profileImageUrl
+                        : `${BACKEND_URL}${msg.sender.profileImageUrl}`)
+                    : null;
+
+                setNotif({
+                    senderName: msg.sender?.name || "Someone",
+                    preview: preview.slice(0, 60),
+                    avatar: avatarUrl,
+                    senderId,
+                    convId,
+                });
+            }
+        });
+
+        // Keep-alive ping: Render free tier drops idle connections after ~30 s.
+        const keepAlive = setInterval(() => {
+            if (newSocket.connected) newSocket.emit("ping_server");
+        }, 20_000);
+
+        return () => {
+            clearInterval(keepAlive);
+            newSocket.removeAllListeners();
+            newSocket.disconnect();
+            socketRef.current = null;
+            setSocket(null);
+        };
+    }, [user?._id]);
+
+    const handleNotifOpen = () => {
+        setNotif(null);
+        window.location.href = "/chat";
+    };
+
+    return (
+        <SocketContext.Provider value={{
+            socket,
+            onlineUsers,
+            unreadCounts,
+            totalUnread,
+            clearUnread,
+            setInitialUnread,
+            typingUsers,
+            activeConvIdRef, // Exposed so ChatInterface can mark which conversation is open
+        }}>
+            {children}
+            {notif && (
+                <ChatNotifToast
+                    notif={notif}
+                    onDismiss={() => setNotif(null)}
+                    onOpen={handleNotifOpen}
+                />
+            )}
+            <style>{`
+                @keyframes cnToastIn {
+                    from { opacity: 0; transform: translateY(16px) scale(0.95); }
+                    to   { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                @keyframes cnProgress {
+                    from { width: 100%; }
+                    to   { width: 0%; }
+                }
+            `}</style>
+        </SocketContext.Provider>
+    );
+};
