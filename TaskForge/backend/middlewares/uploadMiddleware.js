@@ -3,7 +3,7 @@ const multer = require("multer");
 // Configure storage engine to memory
 const storage = multer.memoryStorage();
 
-// File filter (Optional, as Cloudinary handles many types, but keep for security)
+//@desc : File filter
 const fileFilter = (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -15,4 +15,4 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({ storage, fileFilter });
 
-module.exports = upload;
+module.exports = upload;

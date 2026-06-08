@@ -3,7 +3,6 @@ import { BASE_URL } from '../../utils/apiPaths';
 
 // URL helpers
 
-/** Resolve a potentially relative media path to a full absolute URL. */
 export const getFullUrl = (path) => {
     if (!path) return '';
     return path.startsWith('http') ? path : `${BASE_URL}${path}`;
@@ -12,10 +11,9 @@ export const getFullUrl = (path) => {
 
 // File utilities
 
-/**
- * Classify a file into a broad category based on MIME type and file name.
- * @returns {'image'|'video'|'audio'|'pdf'|'word'|'excel'|'ppt'|'archive'|'text'|'other'}
- */
+//@desc : get file category from file type and file name
+//@params : fileType, fileName
+//@return : string
 export const getFileCategory = (fileType = '', fileName = '') => {
     if (fileType.startsWith('image/')) return 'image';
     if (fileType.startsWith('video/')) return 'video';
@@ -29,7 +27,9 @@ export const getFileCategory = (fileType = '', fileName = '') => {
     return 'other';
 };
 
-/** Visual metadata (colour, background, border, label) for each file category. */
+//@desc : file metadata for each file category
+//@params : none
+//@return : object
 export const FILE_META = {
     pdf: { color: '#ef4444', bg: '#fef2f2', border: '#fecaca', label: 'PDF' },
     word: { color: '#2563eb', bg: '#eff6ff', border: '#bfdbfe', label: 'DOCX' },
@@ -41,7 +41,9 @@ export const FILE_META = {
     other: { color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb', label: 'File' },
 };
 
-/** Format a byte count into a human-readable string (B / KB / MB). */
+//@desc : format a byte count into a human-readable string (B / KB / MB)
+//@params : bytes
+//@return : string
 export const formatSize = (bytes) => {
     if (!bytes) return '';
     if (bytes < 1024) return `${bytes} B`;
@@ -51,11 +53,9 @@ export const formatSize = (bytes) => {
 
 
 // Text helpers
-/**
- * Truncate a string to at most `n` characters, appending an ellipsis when cut.
- * @param {string} str
- * @param {number} [n=30]
- */
+//@desc : truncate a string to at most `n` characters, appending an ellipsis when cut
+//@params : str, n
+//@return : string
 export const truncateText = (str, n = 30) => {
     if (!str) return '';
     return str.length > n ? str.slice(0, n) + '…' : str;
@@ -63,14 +63,9 @@ export const truncateText = (str, n = 30) => {
 
 
 // Date / time helpers
-
-/**
- * Format a date string for the conversation list:
- *   - Today   → "HH:MM"
- *   - Yesterday → "Yesterday"
- *   - This week → short weekday name (e.g. "Mon")
- *   - Older     → "DD Mon"
- */
+//@desc : format a date string for the conversation list
+//@params : dateStr
+//@return : string
 export const formatTime = (dateStr) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);

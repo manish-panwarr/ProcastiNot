@@ -19,12 +19,10 @@ const upload = require("../middlewares/uploadMiddleware");
 
 //  Auth Routes
 
-// Public — apply strict auth rate limiter (5 req/min per IP)
+// Public
 router.post("/register", authLimiter, registerUser);
 router.post("/login", authLimiter, loginUser);
 
-// Refresh — issues new access token from valid refresh token
-// Apply authLimiter here too to prevent refresh token brute-forcing
 router.post("/refresh", authLimiter, refreshToken);
 
 // Protected profile routes

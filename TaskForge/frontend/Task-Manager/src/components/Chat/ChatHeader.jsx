@@ -3,10 +3,7 @@ import { GrGroup } from 'react-icons/gr';
 import { getInitials } from '../../utils/helper';
 import { getFullUrl } from './chatUtils';
 
-/**
- * Top navigation bar for the active chat containing details, avatar, online status,
- * P2P toggle switch, and chat options.
- */
+
 const ChatHeader = ({
     selectedUser,
     selectedGroup,
@@ -24,7 +21,6 @@ const ChatHeader = ({
     const menuRef = useRef(null);
     const isGroup = !!selectedGroup;
 
-    // Close options menu when clicking outside
     useEffect(() => {
         const handler = (e) => {
             if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -63,11 +59,10 @@ const ChatHeader = ({
                         title="View profile"
                         className="bg-transparent border-none cursor-pointer p-0 flex items-center"
                     >
-                        <div className={`w-10.5 h-10.5 rounded-2xl flex items-center justify-center font-bold text-sm text-white overflow-hidden shadow-xs ${
-                            isGroup
+                        <div className={`w-10.5 h-10.5 rounded-2xl flex items-center justify-center font-bold text-sm text-white overflow-hidden shadow-xs ${isGroup
                                 ? 'bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl'
                                 : 'bg-gradient-to-br from-[#1368EC] to-[#3b82f6] rounded-full'
-                        }`}>
+                            }`}>
                             {isGroup ? (
                                 selectedGroup.groupAvatar ? (
                                     <img
@@ -90,7 +85,7 @@ const ChatHeader = ({
                         </div>
                     </button>
 
-                    {/* Back navigation arrow (visible in compact layouts) */}
+                    {/* Back button*/}
                     {onBack && (
                         <button
                             onClick={onBack}
@@ -111,11 +106,10 @@ const ChatHeader = ({
                         </p>
                         {/* Private Peer-to-Peer encrypted toggle */}
                         {!isGroup && (
-                            <label className={`flex items-center gap-1 cursor-pointer text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all ${
-                                useP2P
+                            <label className={`flex items-center gap-1 cursor-pointer text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all ${useP2P
                                     ? 'bg-emerald-50 text-emerald-700 border-emerald-300 shadow-sm shadow-emerald-500/10'
                                     : 'bg-slate-100 text-slate-500 border-slate-200'
-                            }`}>
+                                }`}>
                                 <input
                                     type="checkbox"
                                     checked={useP2P}
@@ -129,9 +123,8 @@ const ChatHeader = ({
                             </label>
                         )}
                     </div>
-                    <p className={`text-[11px] font-medium m-0 mt-0.5 flex items-center gap-1.5 ${
-                        isGroup ? 'text-violet-600' : isTargetOnline ? 'text-emerald-500' : 'text-slate-400'
-                    }`}>
+                    <p className={`text-[11px] font-medium m-0 mt-0.5 flex items-center gap-1.5 ${isGroup ? 'text-violet-600' : isTargetOnline ? 'text-emerald-500' : 'text-slate-400'
+                        }`}>
                         {isGroup ? (
                             <>
                                 <span>{selectedGroup.participants?.length || 0} members</span>

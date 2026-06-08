@@ -109,7 +109,6 @@ const MessageInput = ({
 
             {/* Compose tools wrapper */}
             <div className="flex gap-1 items-end">
-                {/* Attach File button */}
                 <button
                     type="button"
                     onClick={() => canSendMessage && !editingMessage && fileInputRef.current?.click()}

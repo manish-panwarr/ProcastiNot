@@ -2,9 +2,9 @@ import React from 'react';
 import { getInitials } from '../../utils/helper';
 import { getFullUrl } from './chatUtils';
 
-/**
- * Tab displaying group members list, promote/demote admin controls, and add/remove options.
- */
+//@desc : group members tab
+//@params : group, currentUser, canManageGroup, isGroupCreator, saving, handlePromoteAdmin, handleDemoteAdmin, handleRemoveMember, setShowAddMemberModal
+//@return : jsx
 const GroupMembersTab = ({
     group,
     currentUser,

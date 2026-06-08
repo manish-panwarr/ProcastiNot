@@ -16,7 +16,6 @@ const { upload } = require("../utils/cloudinary");
 const router = express.Router();
 
 // Task Management Routes
-
 router.get("/dashboard-data", protect, getDashboardData);
 router.get("/user-dashboard-data", protect, getUserDashboardData);
 router.get("/", protect, getTasks); // Get all tasks (Admin : all, User : Asssigned tasks only)

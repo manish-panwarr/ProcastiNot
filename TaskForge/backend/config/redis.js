@@ -1,17 +1,10 @@
-/**
- * @file config/redis.js
- * @desc Pure Upstash Redis implementation using @upstash/redis (REST client).
- *       Replaces ioredis. Stateless client with HTTP fallback logic.
- */
-
 const { Redis } = require("@upstash/redis");
 
 let client = null;
-let _isRedisReady = false; // We use a flag to track if initialization succeeded
+let _isRedisReady = false;
 
-/**
- * @desc Returns the Upstash Redis client singleton, creating it on first call.
- */
+
+//@desc : returns the upstash redis client singleton, creating it on first call
 function getRedisClient() {
     if (client) return client;
 
@@ -29,7 +22,7 @@ function getRedisClient() {
             url,
             token,
         });
-        
+
         _isRedisReady = true;
     } catch (err) {
         console.error("[Redis] Initialization error:", err.message);
@@ -40,10 +33,7 @@ function getRedisClient() {
     return client;
 }
 
-/**
- * @desc Startup health check to verify connection via a PING command.
- *       @upstash/redis is HTTP-based, so this performs a real network test.
- */
+//@desc : startup health check to verify connection via a ping command.
 async function testRedisConnection() {
     const redisClient = getRedisClient();
     if (!redisClient) {
@@ -66,25 +56,15 @@ async function testRedisConnection() {
     }
 }
 
-/**
- * @desc Checks whether Redis is initialized and passed the health check.
- */
+//@desc : checks whether redis is initialized and passed the health check
 function isRedisReady() {
     return client !== null && _isRedisReady;
 }
 
-// ─────────────────────────────────────────────
-//  CACHE HELPERS
-//  Gracefully return null/false if Redis is down
-// ─────────────────────────────────────────────
-
-/**
- * @desc Get a cached value by key.
- */
+//@desc : get a cached value by key
 async function getCache(key) {
     try {
         if (!isRedisReady()) return null;
-        // @upstash/redis automatically parses JSON if the stored value is JSON
         const data = await client.get(key);
         return data || null;
     } catch (err) {
@@ -93,14 +73,10 @@ async function getCache(key) {
     }
 }
 
-/**
- * @desc Set a cache entry with optional TTL (seconds).
- */
+//@desc : set a cache entry with optional TTL (seconds).
 async function setCache(key, value, ttlSeconds = 300) {
     try {
         if (!isRedisReady()) return false;
-        // @upstash/redis automatically stringifies objects
-        // We use the { ex: ttl } options object syntax supported by @upstash/redis
         await client.set(key, value, { ex: ttlSeconds });
         return true;
     } catch (err) {
@@ -109,9 +85,7 @@ async function setCache(key, value, ttlSeconds = 300) {
     }
 }
 
-/**
- * @desc Delete a specific cache key.
- */
+//@desc : delete a specific cache key.
 async function deleteCache(key) {
     try {
         if (!isRedisReady()) return false;
@@ -123,9 +97,7 @@ async function deleteCache(key) {
     }
 }
 
-/**
- * @desc Check if a key exists in Redis.
- */
+//@desc : check if a key exists in Redis.
 async function existsCache(key) {
     try {
         if (!isRedisReady()) return false;
@@ -137,9 +109,7 @@ async function existsCache(key) {
     }
 }
 
-/**
- * @desc Invalidate cache keys matching a pattern.
- */
+//@desc : invalidate cache keys matching a pattern.
 async function invalidatePattern(pattern) {
     try {
         if (!isRedisReady()) return false;

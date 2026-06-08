@@ -9,13 +9,9 @@ const zoomBtnStyle = {
     transition: 'background 0.15s', padding: 0,
 };
 
-/**
- * Full-screen media viewer supporting:
- *   - Images  : pan / zoom / gallery navigation (keyboard + mouse wheel)
- *   - Videos  : native player
- *   - Audio   : native player with visual card
- *   - Documents: info card with download prompt
- */
+
+// Full-screen media viewer supporting:
+
 const MediaModal = ({
     src, fileName, fileType, fileSize, category, meta,
     onClose, onDownload, downloading,

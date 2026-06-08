@@ -1,13 +1,3 @@
-/**
- * @file controllers/authController.js
- * @desc Production-grade authentication with:
- *   - Short-lived access tokens (15 min)
- *   - Long-lived refresh tokens (7 days) stored in Redis per device
- *   - Token rotation on every refresh (prevents replay attacks)
- *   - Real logout via Redis blacklisting + refresh token revocation
- *   - User cache invalidation on profile changes
- */
-
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -22,22 +12,15 @@ const {
 } = require("../config/redis");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 
-// ─────────────────────────────────────────────
+
 //  TOKEN CONSTANTS
-// ─────────────────────────────────────────────
 const ACCESS_TOKEN_EXPIRY = "15m";                    // Short-lived — requires refresh
 const REFRESH_TOKEN_EXPIRY = "7d";                    // Long-lived — stored in Redis
 const REFRESH_TOKEN_EXPIRY_SECONDS = 7 * 24 * 3600;  // 604800 seconds
 
-// ─────────────────────────────────────────────
 //  TOKEN GENERATORS
-// ─────────────────────────────────────────────
 
-/**
- * @desc Generates a short-lived JWT access token.
- * @param {string} userId
- * @returns {string} JWT
- */
+// @desc : Generates a short-lived JWT access token.
 const generateAccessToken = (userId) => {
     return jwt.sign(
         { id: userId },
@@ -46,13 +29,7 @@ const generateAccessToken = (userId) => {
     );
 };
 
-/**
- * @desc Generates a long-lived JWT refresh token.
- *       Includes a unique jti (JWT ID) to support per-device revocation.
- * @param {string} userId
- * @param {string} deviceId  — UUID assigned per login session
- * @returns {string} JWT
- */
+// @desc : Generates a long-lived JWT refresh token.
 const generateRefreshToken = (userId, deviceId) => {
     return jwt.sign(
         { id: userId, deviceId, jti: uuidv4() },
@@ -61,22 +38,13 @@ const generateRefreshToken = (userId, deviceId) => {
     );
 };
 
-/**
- * @desc Stores the refresh token in Redis.
- *       Key: refresh:{userId}:{deviceId}  — supports multi-device sessions.
- *       TTL: 7 days (auto-expires, no manual cleanup needed).
- * @param {string} userId
- * @param {string} deviceId
- * @param {string} token
- */
+// @desc : Stores the refresh token in Redis.
 const storeRefreshToken = async (userId, deviceId, token) => {
     const key = `refresh:${userId}:${deviceId}`;
     await setCache(key, token, REFRESH_TOKEN_EXPIRY_SECONDS);
 };
 
-/**
- * @desc Builds the standardised user response payload (no password, no internals).
- */
+// @desc : Builds the standardised user response payload (no password, no internals).
 const buildUserPayload = (user) => ({
     _id: user._id,
     name: user.name,
@@ -86,24 +54,21 @@ const buildUserPayload = (user) => ({
     department: user.department,
 });
 
-/**
- * @desc Sets the refresh token as an HttpOnly cookie.
- *       SameSite=None + Secure required for cross-origin (Vercel frontend → Render backend).
- */
+// @desc : Sets the refresh token as an HttpOnly cookie.
 const setRefreshCookie = (res, token) => {
     res.cookie("refreshToken", token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
         maxAge: REFRESH_TOKEN_EXPIRY_SECONDS * 1000,
-        path: "/api/auth",        // Cookie only sent to auth routes
+        path: "/api/auth",
     });
 };
 
-// ─────────────────────────────────────────────
-//  REGISTER
-//  POST /api/auth/register
-// ─────────────────────────────────────────────
+
+// REGISTER
+
+// POST /api/auth/register
 const registerUser = async (req, res) => {
     try {
         const { name, email, password, profileImageUrl, adminInviteToken, managerToken } = req.body;
@@ -114,11 +79,9 @@ const registerUser = async (req, res) => {
 
         const userExists = await User.findOne({ email }).lean();
         if (userExists) {
-            // Use generic message to avoid user enumeration
             return res.status(400).json({ success: false, message: "Registration failed. Check your details." });
         }
 
-        // Determine role — use strict equality (=== not ==)
         let role = "member";
         if (adminInviteToken && adminInviteToken === process.env.ADMIN_INVITE_TOKEN) {
             role = "admin";
@@ -156,7 +119,7 @@ const registerUser = async (req, res) => {
             success: true,
             ...buildUserPayload(user),
             accessToken,
-            deviceId,   // Frontend should store this for multi-device refresh support
+            deviceId,
         });
 
     } catch (error) {
@@ -165,10 +128,9 @@ const registerUser = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  LOGIN
 //  POST /api/auth/login
-// ─────────────────────────────────────────────
 const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
@@ -177,8 +139,6 @@ const loginUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Email and password are required" });
         }
 
-        // Use generic message for both "not found" and "wrong password"
-        // to prevent user enumeration attacks
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid credentials" });
@@ -210,14 +170,11 @@ const loginUser = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  REFRESH TOKEN
 //  POST /api/auth/refresh
-//  Validates refresh token, rotates it, issues new access token.
-// ─────────────────────────────────────────────
 const refreshToken = async (req, res) => {
     try {
-        // Accept refresh token from HttpOnly cookie or request body
         const token = req.cookies?.refreshToken || req.body?.refreshToken;
         const deviceId = req.body?.deviceId || req.headers["x-device-id"];
 
@@ -225,7 +182,6 @@ const refreshToken = async (req, res) => {
             return res.status(401).json({ success: false, message: "Refresh token missing" });
         }
 
-        // Verify the refresh token signature and expiry
         let decoded;
         try {
             decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
@@ -240,16 +196,13 @@ const refreshToken = async (req, res) => {
             return res.status(401).json({ success: false, message: "Device ID missing" });
         }
 
-        // Validate against Redis — is this token still registered?
         const storeKey = `refresh:${userId}:${resolvedDeviceId}`;
         const storedToken = await getCache(storeKey);
 
         if (!storedToken || storedToken !== token) {
-            // Token not in Redis OR doesn't match — possible replay attack
             return res.status(401).json({ success: false, message: "Refresh token is invalid or has been rotated" });
         }
 
-        // Rotate: delete old refresh token, issue new pair
         await deleteCache(storeKey);
 
         const newAccessToken = generateAccessToken(userId);
@@ -269,38 +222,28 @@ const refreshToken = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  LOGOUT
 //  POST /api/auth/logout
-//  Revokes both tokens. Access token blacklisted until its natural expiry.
-// ─────────────────────────────────────────────
 const logoutUser = async (req, res) => {
     try {
         const deviceId = req.body?.deviceId || req.headers["x-device-id"];
-
-        // 1. Blacklist the current access token until it expires naturally
         const authHeader = req.headers.authorization;
         if (authHeader && authHeader.startsWith("Bearer ")) {
             const accessToken = authHeader.split(" ")[1];
 
             try {
                 const decoded = jwt.verify(accessToken, process.env.JWT_ACCESS_SECRET);
-                const expiresAt = decoded.exp;  // Unix timestamp in seconds
+                const expiresAt = decoded.exp;
                 const blacklistKey = `blacklist:${accessToken}`;
-                // Set expiry to match token's natural expiry — Redis auto-cleans it
                 await setWithExpiry(blacklistKey, "1", expiresAt);
             } catch {
-                // If token is already expired, no need to blacklist
             }
         }
-
-        // 2. Delete the refresh token from Redis for this device
         if (req.user && deviceId) {
             const storeKey = `refresh:${req.user._id}:${deviceId}`;
             await deleteCache(storeKey);
         }
-
-        // 3. Clear the refresh cookie
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -308,7 +251,6 @@ const logoutUser = async (req, res) => {
             path: "/api/auth",
         });
 
-        // 4. Invalidate user cache
         if (req.user) {
             await deleteCache(`cache:user:${req.user._id}`);
         }
@@ -321,22 +263,14 @@ const logoutUser = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  LOGOUT ALL DEVICES
 //  POST /api/auth/logout-all
-//  Revokes all refresh tokens for the user across all devices.
-// ─────────────────────────────────────────────
 const logoutAllDevices = async (req, res) => {
     try {
         const { invalidatePattern } = require("../config/redis");
-
-        // Delete all refresh tokens for this user
         const deleted = await invalidatePattern(`refresh:${req.user._id}:*`);
-
-        // Invalidate user cache
         await deleteCache(`cache:user:${req.user._id}`);
-
-        // Clear cookie
         res.clearCookie("refreshToken", {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
@@ -355,13 +289,10 @@ const logoutAllDevices = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
 //  GET PROFILE
 //  GET /api/auth/profile
-// ─────────────────────────────────────────────
 const getUserProfile = async (req, res) => {
     try {
-        // req.user is already set by protect middleware (from cache or DB)
         if (!req.user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
@@ -372,10 +303,9 @@ const getUserProfile = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  UPDATE PROFILE
 //  PUT /api/auth/profile
-// ─────────────────────────────────────────────
 const updateUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user._id || req.user.id);
@@ -396,15 +326,11 @@ const updateUserProfile = async (req, res) => {
         }
 
         const updatedUser = await user.save();
-
-        // Invalidate the user cache so next request fetches fresh data
         await Promise.all([
             deleteCache(`cache:user:${updatedUser._id}`),
             deleteCache("cache:users:all"),
             invalidatePattern("cache:users:page:*"),
         ]).catch(err => console.error("Profile update cache invalidation error:", err.message));
-
-        // Issue a new access token (email/name might have changed)
         const accessToken = generateAccessToken(updatedUser._id);
 
         return res.json({
@@ -419,10 +345,9 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  UPLOAD IMAGE
 //  POST /api/auth/upload-image
-// ─────────────────────────────────────────────
 const uploadImage = async (req, res) => {
     try {
         if (!req.file) {

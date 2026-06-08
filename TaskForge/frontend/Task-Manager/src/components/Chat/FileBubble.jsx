@@ -4,7 +4,8 @@ import MediaModal from './MediaModal';
 import { getFileCategory, FILE_META, formatSize } from './chatUtils';
 import { BASE_URL } from '../../utils/apiPaths';
 
-/** Resolve a media URL that may be relative or absolute. */
+// @desc : resolve a media url that may be relative or absolute
+
 const resolveUrl = (mediaUrl) => {
     if (!mediaUrl) return null;
     if (mediaUrl.startsWith('http') || mediaUrl.startsWith('data:') || mediaUrl.startsWith('blob:')) {
@@ -13,7 +14,9 @@ const resolveUrl = (mediaUrl) => {
     return `${BASE_URL}${mediaUrl}`;
 };
 
-/** Shared download handler for all file types. */
+//@desc : download handler for all file types
+//@params : url, name, onStart, onEnd, onError
+//@return : void
 const downloadFile = async (url, name, onStart, onEnd, onError) => {
     if (!url) return;
     onStart();
@@ -46,7 +49,9 @@ const downloadFile = async (url, name, onStart, onEnd, onError) => {
     }
 };
 
-// Spinner SVG used in download buttons.
+//@desc : spinner svg used in download buttons
+//@params : size
+//@return : jsx
 const SpinnerIcon = ({ size = 13 }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" style={{ animation: 'msSpin 1s linear infinite' }}>
         <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="2.5" strokeDasharray="31.4" strokeDashoffset="10" strokeLinecap="round" />
@@ -60,15 +65,7 @@ const DownloadIcon = ({ size = 13 }) => (
     </svg>
 );
 
-/**
- * Renders a file attachment bubble appropriate to the file type:
- *   - image  → thumbnail with hover overlay and gallery support
- *   - video  → thumbnail with play button
- *   - audio  → compact player card
- *   - other  → document card with type label and download button
- *
- * Opens a MediaModal portal on click.
- */
+
 const FileBubble = ({ fileTransfer, isMe, isP2P = false, allImages, imageIndex = 0 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeIdx, setActiveIdx] = useState(imageIndex);

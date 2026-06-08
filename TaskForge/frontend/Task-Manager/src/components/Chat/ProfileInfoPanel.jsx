@@ -11,10 +11,7 @@ import GroupMembersTab from './GroupMembersTab';
 import SharedFilesTab from './SharedFilesTab';
 import { getFullUrl, getFileCategory } from './chatUtils';
 
-/**
- * Sidebar panel displaying detailed info about the selected user or group.
- * Allows managing group settings, members, and viewing shared files.
- */
+//@desc : Sidebar panel displaying detailed info about the selected user or group. 
 const ProfileInfoPanel = ({
     user,
     group,

@@ -1,24 +1,12 @@
-/**
- * @file controllers/userController.js
- * @desc Production-grade user controller with:
- *   - Aggregation pipelines replacing N+1 query patterns
- *   - Redis caching for expensive read operations
- *   - .lean() on all read queries
- *   - Cache invalidation on writes
- */
-
 const Task = require("../models/Task");
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
 const { getCache, setCache, deleteCache, invalidatePattern } = require("../config/redis");
 
-// ─────────────────────────────────────────────
+
 //  getUsers
 //  GET /api/users
-//  BEFORE: 1 User.find + 3 countDocuments × N users = 1 + 3N DB calls
-//  AFTER:  1 aggregation pipeline (always 2 DB operations total)
-// ─────────────────────────────────────────────
 const getUsers = async (req, res) => {
     try {
         const { role, department, search, paginate, page: qPage, limit: qLimit } = req.query;
@@ -202,10 +190,9 @@ const getUsers = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  getUserById
 //  GET /api/users/:id
-// ─────────────────────────────────────────────
 const getUserById = async (req, res) => {
     try {
         const userId = req.params.id;
@@ -226,7 +213,6 @@ const getUserById = async (req, res) => {
         let adminsValues = [];
 
         if (user.role === "admin" || user.role === "manager") {
-            // Aggregation: get tasks created by this admin + rank in single pipeline
             const [taskResult, rankResult] = await Promise.all([
                 Task.find({ createdBy: user._id })
                     .populate("assignedTo", "name email")
@@ -269,7 +255,7 @@ const getUserById = async (req, res) => {
         }
 
         const payload = { user, tasks, admins: adminsValues, adminStats };
-        await setCache(cacheKey, payload, 180); // Cache 3 minutes
+        await setCache(cacheKey, payload, 180);
         return res.json(payload);
 
     } catch (error) {
@@ -278,10 +264,9 @@ const getUserById = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  updateUser
 //  PUT /api/users/:id
-// ─────────────────────────────────────────────
 const updateUser = async (req, res) => {
     try {
         const { name, email, department, role, isOnHold } = req.body;
@@ -306,7 +291,6 @@ const updateUser = async (req, res) => {
 
         const updatedUser = await user.save();
 
-        // Invalidate caches for this user
         await Promise.all([
             deleteCache(`cache:user:${updatedUser._id}`),
             deleteCache(`cache:user-profile:${updatedUser._id}`),
@@ -330,10 +314,9 @@ const updateUser = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  deleteUser
 //  DELETE /api/users/:id
-// ─────────────────────────────────────────────
 const deleteUser = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -345,7 +328,6 @@ const deleteUser = async (req, res) => {
 
         await user.deleteOne();
 
-        // Invalidate caches
         await Promise.all([
             deleteCache(`cache:user:${user._id}`),
             deleteCache(`cache:user-profile:${user._id}`),
@@ -361,12 +343,9 @@ const deleteUser = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  getManagerDashboardStats
 //  GET /api/users/manager-dashboard-stats
-//  BEFORE: 7 countDocuments + 3N countDocuments = 7 + 3N calls
-//  AFTER:  3 aggregation pipelines, result cached 2 minutes
-// ─────────────────────────────────────────────
 const getManagerDashboardStats = async (req, res) => {
     try {
         if (req.user.role !== "manager") {
@@ -377,9 +356,7 @@ const getManagerDashboardStats = async (req, res) => {
         const cached = await getCache(cacheKey);
         if (cached) return res.json(cached);
 
-        // Run count aggregations in parallel instead of sequential countDocuments
         const [userCounts, taskCounts, userPerformanceRaw] = await Promise.all([
-            // User counts by role in a single aggregation
             User.aggregate([
                 {
                     $group: {
@@ -388,7 +365,6 @@ const getManagerDashboardStats = async (req, res) => {
                     }
                 }
             ]),
-            // Task counts by status in a single aggregation
             Task.aggregate([
                 {
                     $group: {
@@ -397,7 +373,6 @@ const getManagerDashboardStats = async (req, res) => {
                     }
                 }
             ]),
-            // User performance: assigned + completed + created per user — all in one pipeline
             User.aggregate([
                 { $project: { password: 0, __v: 0 } },
                 {
@@ -444,13 +419,10 @@ const getManagerDashboardStats = async (req, res) => {
             ])
         ]);
 
-        // Map user count aggregation results
         const userCountMap = userCounts.reduce((acc, item) => {
             acc[item._id] = item.count;
             return acc;
         }, {});
-
-        // Map task count aggregation results
         const taskCountMap = taskCounts.reduce((acc, item) => {
             acc[item._id] = item.count;
             return acc;
@@ -478,7 +450,7 @@ const getManagerDashboardStats = async (req, res) => {
             userPerformance
         };
 
-        await setCache(cacheKey, payload, 120); // Cache 2 minutes
+        await setCache(cacheKey, payload, 120);
         return res.json(payload);
 
     } catch (error) {
@@ -487,10 +459,8 @@ const getManagerDashboardStats = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
 //  getChatUsers
 //  GET /api/users/chat-list
-// ─────────────────────────────────────────────
 const getChatUsers = async (req, res) => {
     try {
         const userId = req.user._id || req.user.id;
@@ -503,7 +473,7 @@ const getChatUsers = async (req, res) => {
             .sort({ name: 1 })
             .lean();
 
-        await setCache(cacheKey, users, 300); // Cache 5 minutes
+        await setCache(cacheKey, users, 300);
         return res.json(users);
 
     } catch (error) {

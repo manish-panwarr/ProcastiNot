@@ -1,15 +1,3 @@
-/**
- * @file controllers/taskController.js
- * @desc Production-grade task controller with:
- *   - Redis caching on dashboard data (heavy aggregations)
- *   - .lean() on all read-only queries
- *   - $facet aggregation to replace multiple countDocuments in one pass
- *   - Cache invalidation on all write operations
- *   - Pagination on getTasks list endpoint
- *   - Text search using MongoDB text index (replaces slow $regex)
- *   - Fire-and-forget email notifications via Nodemailer (task assigned, task updated)
- */
-
 const Task = require("../models/Task");
 const User = require("../models/User");
 const moment = require("moment");
@@ -28,13 +16,11 @@ const {
 } = require("../utils/emailService");
 
 
+
+
 //  Helpers
 
-
-/**
- * @desc Invalidate all task-related caches for a given user.
- *       Called on any write operation (create, update, delete, status change).
- */
+//@desc : Invalidate all task-related caches for a given user.
 async function invalidateTaskCaches(userId) {
     await Promise.all([
         invalidatePattern("cache:dashboard:*"),
@@ -44,11 +30,9 @@ async function invalidateTaskCaches(userId) {
     ]);
 }
 
-// ─────────────────────────────────────────────
+
 //  getTasks
 //  GET /api/tasks/
-//  Added: pagination, .lean(), text search index, $facet counts
-// ─────────────────────────────────────────────
 const getTasks = async (req, res) => {
     try {
         const { status, department, search, createdByMe, assignedToMe } = req.query;
@@ -80,7 +64,6 @@ const getTasks = async (req, res) => {
             filter.assignedTo = { $in: userIds };
         }
 
-        // Use MongoDB text index for search (replaces slow $regex)
         if (search) {
             filter.$text = { $search: search };
         }
@@ -109,7 +92,6 @@ const getTasks = async (req, res) => {
         }
 
         const userObjectId = new mongoose.Types.ObjectId(req.user._id || req.user.id);
-        // Use $facet to get tasks + counts in a single DB round-trip
         const baseMatch = { $match: filter };
         const countFilter = isAdminOrManager ? {} : { assignedTo: userObjectId };
 
@@ -122,7 +104,6 @@ const getTasks = async (req, res) => {
                 .limit(limit)
                 .lean(),
 
-            // Single $facet pipeline for all status counts
             Task.aggregate([
                 { $match: countFilter },
                 {
@@ -136,7 +117,6 @@ const getTasks = async (req, res) => {
             ])
         ]);
 
-        // Add computed completedTodoCount without extra DB calls
         const tasks = tasksResult.map(task => ({
             ...task,
             completedTodoCount: task.todoChecklist
@@ -171,10 +151,8 @@ const getTasks = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
 //  getTaskById
 //  GET /api/tasks/:id
-// ─────────────────────────────────────────────
 const getTaskById = async (req, res) => {
     try {
         if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -211,10 +189,8 @@ const getTaskById = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
 //  createTask
 //  POST /api/tasks/
-// ─────────────────────────────────────────────
 const createTask = async (req, res) => {
     try {
         let { title, description, priority, dueDate, assignedTo, attachments, todoChecklist } = req.body;
@@ -290,11 +266,9 @@ const createTask = async (req, res) => {
             todoChecklist, createdBy: creatorId,
         });
 
-        // Send in-app + email notifications — fire-and-forget, never block response
         const Notification = require("../models/Notification");
         const ioSocket = req.app.get("io");
 
-        // Fetch assigned users in one query to get name + email for emails
         const assignedUsers = assignedTo.length > 0
             ? await User.find({ _id: { $in: assignedTo } }).select("name email").lean()
             : [];
@@ -329,7 +303,6 @@ const createTask = async (req, res) => {
             }
         }
 
-        // Invalidate task-related caches in the background
         invalidateTaskCaches(creatorId).catch(err => console.error("Cache invalidation failed:", err.message));
 
         return res.status(201).json({ success: true, message: "Task created successfully!", task });
@@ -340,10 +313,9 @@ const createTask = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  updateTask
 //  PUT /api/tasks/:id
-// ─────────────────────────────────────────────
 const updateTask = async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
@@ -462,10 +434,9 @@ const updateTask = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  updateTaskStatus
 //  PUT /api/tasks/:id/status
-// ─────────────────────────────────────────────
 const updateTaskStatus = async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
@@ -521,10 +492,9 @@ const updateTaskStatus = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  deleteTask
 //  DELETE /api/tasks/:id
-// ─────────────────────────────────────────────
 const deleteTask = async (req, res) => {
     try {
         const task = await Task.findById(req.params.id);
@@ -546,10 +516,8 @@ const deleteTask = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
 //  updateTaskChecklist
 //  PUT /api/tasks/:id/todo
-// ─────────────────────────────────────────────
 const updateTaskChecklist = async (req, res) => {
     try {
         const { todoChecklist } = req.body;
@@ -595,12 +563,9 @@ const updateTaskChecklist = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  getDashboardData
 //  GET /api/tasks/dashboard-data
-//  BEFORE: 4 countDocuments + 5 aggregate calls = 9 DB operations
-//  AFTER:  2 aggregate calls (1 $facet + existing charts) + Redis cache
-// ─────────────────────────────────────────────
 const getDashboardData = async (req, res) => {
     try {
         const userId = req.user._id || req.user.id;
@@ -625,7 +590,6 @@ const getDashboardData = async (req, res) => {
             activeWorkloadRaw,
             topPerformersRaw
         ] = await Promise.all([
-            // Stats: replace 4 countDocuments with 1 $facet
             Task.aggregate([
                 {
                     $facet: {
@@ -646,7 +610,6 @@ const getDashboardData = async (req, res) => {
                 { $group: { _id: "$status", count: { $sum: 1 } } }
             ]),
 
-            // Task distribution by priority
             Task.aggregate([
                 { $match: { ...memberMatch } },
                 { $group: { _id: "$priority", count: { $sum: 1 } } }
@@ -722,7 +685,7 @@ const getDashboardData = async (req, res) => {
         const stats = statsResult[0];
         const totalTasks = stats.total[0]?.count || 0;
 
-        // Format task distribution
+
         const taskStatuses = ["Pending", "In Progress", "Completed"];
         const taskDistribution = taskStatuses.reduce((acc, s) => {
             acc[s.replace(/\s+/g, "")] = taskDistributionRaw.find(i => i._id === s)?.count || 0;
@@ -735,7 +698,6 @@ const getDashboardData = async (req, res) => {
             return acc;
         }, {});
 
-        // Fill missing days for chart
         const last7Days = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
@@ -748,7 +710,6 @@ const getDashboardData = async (req, res) => {
             });
         }
 
-        // Format department data
         const tasksByDepartment = tasksByDepartmentRaw.reduce((acc, item) => {
             acc[item._id || "Other"] = item.count;
             return acc;
@@ -773,7 +734,7 @@ const getDashboardData = async (req, res) => {
             recentTasks,
         };
 
-        await setCache(cacheKey, payload, 120); // Cache 2 minutes
+        await setCache(cacheKey, payload, 120);
         return res.status(200).json(payload);
 
     } catch (error) {
@@ -782,12 +743,9 @@ const getDashboardData = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  getUserDashboardData
 //  GET /api/tasks/user-dashboard-data
-//  BEFORE: 4 countDocuments + 3 aggregate calls = 7 DB operations
-//  AFTER:  2 parallel calls + Redis cache
-// ─────────────────────────────────────────────
 const getUserDashboardData = async (req, res) => {
     try {
         const userId = req.user._id || req.user.id;
@@ -806,7 +764,6 @@ const getUserDashboardData = async (req, res) => {
             last7DaysRaw,
             recentTasks
         ] = await Promise.all([
-            // Replace 4 countDocuments with 1 $facet
             Task.aggregate([
                 { $match: userMatch },
                 {
@@ -893,7 +850,7 @@ const getUserDashboardData = async (req, res) => {
             recentTasks,
         };
 
-        await setCache(cacheKey, payload, 120); // Cache 2 minutes
+        await setCache(cacheKey, payload, 120);
         return res.status(200).json(payload);
 
     } catch (error) {

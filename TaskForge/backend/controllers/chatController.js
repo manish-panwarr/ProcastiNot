@@ -168,7 +168,6 @@ const sendMessage = async (req, res) => {
             await conversation.save();
 
             if (io) {
-                // Server-side delivery: emit directly to recipients
                 if (conversation.isGroup) {
                     createdMessages.forEach(msg => {
                         io.to(`group:${conversation._id}`).emit("receive_group_message", { ...msg.toJSON(), conversationId: conversation._id });
@@ -222,7 +221,6 @@ const markAsSeen = async (req, res) => {
 
         const io = req.app.get("io");
         if (io) {
-            // Scoped: only notify participants of this conversation
             const conversation = await Conversation.findById(conversationId);
             if (conversation) {
                 conversation.participants.forEach(participantId => {
@@ -244,7 +242,6 @@ const deleteConversation = async (req, res) => {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return res.status(404).json({ message: "Conversation not found" });
 
-        // 1. Delete Group Avatar if exists (Legacy local files only)
         if (conversation.groupAvatar && !conversation.groupAvatar.startsWith("http")) {
             const avatarPath = path.join(__dirname, "..", conversation.groupAvatar);
             if (fs.existsSync(avatarPath)) {
@@ -252,7 +249,6 @@ const deleteConversation = async (req, res) => {
             }
         }
 
-        // 2. Delete all files shared in this conversation
         const messagesWithFiles = await Message.find({
             conversationId,
             "fileTransfer.mediaUrl": { $exists: true }
@@ -271,10 +267,8 @@ const deleteConversation = async (req, res) => {
             }
         });
 
-        // 3. Soft delete messages and conversation
         await Message.updateMany({ conversationId }, { $set: { isDeleted: true, deletedAt: new Date() } });
 
-        // Scoped: notify only participants before deleting
         const io = req.app.get("io");
         if (io) {
             conversation.participants.forEach(participantId => {
@@ -298,7 +292,6 @@ const clearChat = async (req, res) => {
         const conversation = await Conversation.findById(conversationId);
         if (!conversation) return res.status(404).json({ message: "Conversation not found" });
 
-        // Delete all files shared in this conversation
         const messagesWithFiles = await Message.find({
             conversationId,
             "fileTransfer.mediaUrl": { $exists: true }
@@ -317,15 +310,12 @@ const clearChat = async (req, res) => {
             }
         });
 
-        // Soft delete all messages but keep the conversation
         await Message.updateMany({ conversationId }, { $set: { isDeleted: true, deletedAt: new Date() } });
 
-        // Clear last message reference
         conversation.lastMessage = null;
         conversation.lastMessageAt = null;
         await conversation.save();
 
-        // Scoped: only notify participants
         const io = req.app.get("io");
         if (io) {
             conversation.participants.forEach(participantId => {
@@ -351,7 +341,6 @@ const deleteMessage = async (req, res) => {
 
         const io = req.app.get("io");
 
-        // Get conversation so we can scope the broadcast
         const conversation = await Conversation.findById(message.conversationId);
         const participantIds = conversation ? conversation.participants.map(p => p.toString()) : [];
 
@@ -415,7 +404,6 @@ const adminDeleteMessage = async (req, res) => {
         // Permanently remove from DB
         await Message.findByIdAndDelete(messageId);
 
-        // Notify participants
         const io = req.app.get("io");
         if (io && conversation) {
             conversation.participants.forEach(pid => {

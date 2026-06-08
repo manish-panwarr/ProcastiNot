@@ -1,11 +1,6 @@
 import React from 'react';
 
-/**
- * Animated three-dot typing indicator.
- * Shown when one or more participants in the active conversation are typing.
- *
- * @param {number} count - Number of people typing (1 shows "typing...", 2+ shows count).
- */
+//@desc : typing indicator for  chat
 const TypingIndicator = ({ count = 1 }) => {
     if (count === 0) return null;
 

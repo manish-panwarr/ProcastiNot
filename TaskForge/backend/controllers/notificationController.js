@@ -1,17 +1,8 @@
-/**
- * @file controllers/notificationController.js
- * @desc Production-grade notification controller.
- *       - .lean() on reads
- *       - limit(50) to prevent unbounded result sets
- *       - Replaced dangerous setTimeout (memory leak) with synchronous cleanup
- */
-
 const Notification = require("../models/Notification");
 
-// ─────────────────────────────────────────────
+
 //  getNotifications
 //  GET /api/notifications
-// ─────────────────────────────────────────────
 const getNotifications = async (req, res) => {
     try {
         // Limit to 50 most recent — unbounded result sets are a DoS risk
@@ -29,13 +20,10 @@ const getNotifications = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
+
 //  markAsRead
 //  PUT /api/notifications/:id/read
-//  Removed: dangerous setTimeout memory-leak pattern.
-//  Now: mark read + delete in the same request (atomic).
-//  The 5-second delay was cosmetic only — not needed server-side.
-// ─────────────────────────────────────────────
 const markAsRead = async (req, res) => {
     try {
         const notification = await Notification.findOneAndUpdate(
@@ -51,8 +39,6 @@ const markAsRead = async (req, res) => {
         res.status(200).json({ success: true, notification });
 
         // Delete the notification after response is sent.
-        // Using setImmediate (non-blocking, synchronous-queue) instead of setTimeout
-        // — no memory leak, runs after response flush, safe under high concurrency.
         setImmediate(async () => {
             try {
                 await Notification.findByIdAndDelete(notification._id);
@@ -73,12 +59,9 @@ const markAsRead = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  markAllAsRead
 //  PUT /api/notifications/read-all
-//  Replaced: setTimeout memory leak
-//  Now: findOne + deleteMany in immediate queue after response
-// ─────────────────────────────────────────────
 const markAllAsRead = async (req, res) => {
     try {
         const userId = req.user._id;

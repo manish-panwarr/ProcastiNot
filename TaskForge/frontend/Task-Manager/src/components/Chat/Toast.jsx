@@ -75,13 +75,11 @@ const Toast = ({ message, type = 'info', onClose, duration = 3500 }) => {
                 borderColor: cfg.border,
             }}
         >
-            {/* Coloured left accent bar */}
             <div
                 className="w-0.5 h-7 rounded-sm shrink-0"
                 style={{ background: cfg.accent }}
             />
 
-            {/* Icon wrapper */}
             <div
                 className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border"
                 style={{ background: 'rgba(255,255,255,0.07)', borderColor: cfg.border }}
@@ -89,7 +87,6 @@ const Toast = ({ message, type = 'info', onClose, duration = 3500 }) => {
                 {cfg.icon}
             </div>
 
-            {/* Message text */}
             <span className="flex-1 leading-relaxed">{message}</span>
 
             {/* Dismiss button */}
@@ -106,7 +103,7 @@ const Toast = ({ message, type = 'info', onClose, duration = 3500 }) => {
 };
 
 
-// ToastContainer
+
 const ToastContainer = ({ toasts, onRemove }) => (
     <div className="fixed top-5 right-5 z-[99999] flex flex-col gap-2 pointer-events-none">
         {toasts.map((t) => (
@@ -122,7 +119,7 @@ const ToastContainer = ({ toasts, onRemove }) => (
 );
 
 
-// useToast hook
+
 export const useToast = () => {
     const [toasts, setToasts] = useState([]);
 

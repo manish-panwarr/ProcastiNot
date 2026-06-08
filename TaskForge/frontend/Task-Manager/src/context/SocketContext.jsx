@@ -145,8 +145,6 @@ export const SocketProvider = ({ children }) => {
 
         const newSocket = io(BACKEND_URL, {
             path: "/socket.io",
-            // "polling" must come first for Render's reverse proxy; the client then
-            // upgrades to WebSocket automatically when the proxy supports it.
             transports: ["polling", "websocket"],
             withCredentials: true,
             reconnection: true,
@@ -165,7 +163,7 @@ export const SocketProvider = ({ children }) => {
             newSocket.emit("register_user", user._id);
         });
 
-        // Re-register after every reconnect (handles network drops and Render wake-ups).
+
         newSocket.on("reconnect", (attempts) => {
             console.log(`Socket reconnected after ${attempts} attempt(s)`);
             newSocket.emit("register_user", user._id);
@@ -173,7 +171,6 @@ export const SocketProvider = ({ children }) => {
 
         newSocket.on("disconnect", (reason) => {
             console.warn("Socket disconnected:", reason);
-            // "io server disconnect" means the server kicked us; reconnect manually.
             if (reason === "io server disconnect") newSocket.connect();
         });
 
@@ -184,7 +181,7 @@ export const SocketProvider = ({ children }) => {
         // Online presence
         newSocket.on("get_online_users", (users) => setOnlineUsers(users));
 
-        // Typing indicators — server emits { conversationId, userId }
+        // Typing indicators
         newSocket.on("user_typing", ({ userId }) => {
             if (!userId) return;
             setTypingUsers((prev) => ({ ...prev, [userId]: true }));
@@ -212,14 +209,14 @@ export const SocketProvider = ({ children }) => {
             const isCurrentlyViewing = activeConvIdRef.current === convId;
             const onChatPage = window.location.pathname.startsWith("/chat");
 
-            // Only increment badge when the conversation is NOT currently open.
+
             if (!isCurrentlyViewing) {
                 const isGroup = data.isGroup || (data.participants && data.participants.length > 2);
                 const key = isGroup ? convId : senderId;
                 setUnreadCounts((prev) => ({ ...prev, [key]: (prev[key] || 0) + 1 }));
             }
 
-            // Show a floating toast only when the user is NOT on the chat page at all.
+            // Show a floating toast
             if (!onChatPage) {
                 let preview = msg.text || "";
                 if (!preview && msg.fileTransfer?.fileName) {
@@ -275,7 +272,7 @@ export const SocketProvider = ({ children }) => {
             clearUnread,
             setInitialUnread,
             typingUsers,
-            activeConvIdRef, // Exposed so ChatInterface can mark which conversation is open
+            activeConvIdRef,
         }}>
             {children}
             {notif && (

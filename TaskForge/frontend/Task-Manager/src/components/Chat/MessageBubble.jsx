@@ -4,10 +4,10 @@ import MessageTicks from './MessageTicks';
 import { getInitials } from '../../utils/helper';
 import { getFileCategory, getFullUrl } from './chatUtils';
 
-/**
- * Individual chat bubble supporting sender metadata, file attachments, ticks,
- * P2P indicator, deleted state, and context menus.
- */
+
+//@desc  : Individual chat bubble supporting sender metadata, file attachments, ticks,
+//@params : msg, index, currentUser, isGroup, handleContextMenu, allConvImages, msgImageIndexMap
+//@return : jsx
 const MessageBubble = ({
     msg,
     index,
@@ -83,21 +83,18 @@ const MessageBubble = ({
                 )}
 
                 <div
-                    className={`relative text-sm leading-relaxed cursor-context-menu animate-[msBubbleIn_0.22s_cubic-bezier(.34,1.4,.64,1)] ${
-                        isMediaOnly ? 'p-1' : 'px-3.5 py-2.5'
-                    } ${
-                        isMe
+                    className={`relative text-sm leading-relaxed cursor-context-menu animate-[msBubbleIn_0.22s_cubic-bezier(.34,1.4,.64,1)] ${isMediaOnly ? 'p-1' : 'px-3.5 py-2.5'
+                        } ${isMe
                             ? 'rounded-2xl rounded-br-xs text-white'
                             : 'rounded-2xl rounded-bl-xs text-slate-800'
-                    } ${
-                        isVisualMedia
+                        } ${isVisualMedia
                             ? isMe
                                 ? 'bg-blue-500/10 border border-blue-500/25 shadow-md shadow-blue-500/5 backdrop-blur-md'
                                 : 'bg-white/10 border border-white/25 shadow-md shadow-black/5 backdrop-blur-md'
                             : isMe
                                 ? 'bg-gradient-to-br from-[#1368EC] to-[#1d4ed8] shadow-sm shadow-blue-600/20'
                                 : 'bg-white/95 border border-[#e8eef8] shadow-xs'
-                    }`}
+                        }`}
                 >
                     {/* Media File Attachment bubble */}
                     {hasFT && (
@@ -125,12 +122,10 @@ const MessageBubble = ({
                         </div>
                     )}
 
-                    {/* Chat Text content */}
                     {msg.text && (
                         <p className="m-0 whitespace-pre-wrap break-words">{msg.text}</p>
                     )}
 
-                    {/* Peer-to-Peer badge */}
                     {msg.isP2P && (
                         <div className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-white text-[8px] px-1 py-0.5 rounded font-extrabold shadow-sm select-none">
                             P2P
@@ -139,19 +134,17 @@ const MessageBubble = ({
 
                     {/* Message Timestamp & delivery ticks */}
                     <div
-                        className={`flex items-center justify-end gap-1 mt-1 ${
-                            isMediaOnly
+                        className={`flex items-center justify-end gap-1 mt-1 ${isMediaOnly
                                 ? 'absolute bottom-2 right-2.5 bg-black/45 rounded-lg px-1.5 py-0.5 backdrop-blur-xs'
                                 : ''
-                        }`}
+                            }`}
                     >
-                        <span className={`text-[9px] ${
-                            isMediaOnly
+                        <span className={`text-[9px] ${isMediaOnly
                                 ? 'text-white font-medium'
                                 : isMe
                                     ? 'text-white/70'
                                     : 'text-slate-400'
-                        }`}>
+                            }`}>
                             {new Date(msg.createdAt).toLocaleTimeString([], {
                                 hour: '2-digit',
                                 minute: '2-digit',

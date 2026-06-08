@@ -296,8 +296,6 @@ function baseTemplate({ headerColor = "#6C63FF", headerText, body }) {
 }
 
 //  PRIORITY BADGE
-
-
 function priorityBadge(priority = "Medium") {
     const colors = {
         High: { bg: "#fee2e2", text: "#dc2626" },

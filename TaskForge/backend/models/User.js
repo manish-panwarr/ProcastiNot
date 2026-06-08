@@ -16,7 +16,7 @@ const UserSchema = new mongoose.Schema({
 
 //  INDEXES
 
-// Role-based queries: getManagerDashboardStats counts per role (3 countDocuments → 1 aggregation)
+// Role-based queries: getManagerDashboardStats counts per role
 UserSchema.index({ role: 1 }, { background: true });
 
 // Department-based task filtering in getTasks: User.find({ department })

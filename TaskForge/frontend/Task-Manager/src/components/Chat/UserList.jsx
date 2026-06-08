@@ -91,9 +91,7 @@ const ConvRow = React.memo(({ item, isGroup, isOnline, isSelected, onSelect, unr
     );
 });
 
-// ---------------------------------------------------------------------------
-// CreateGroupModal Component
-// ---------------------------------------------------------------------------
+
 const CreateGroupModal = ({ users, onClose, onCreated }) => {
     const [groupName, setGroupName] = useState('');
     const [selectedIds, setSelectedIds] = useState([]);
@@ -241,9 +239,8 @@ const CreateGroupModal = ({ users, onClose, onCreated }) => {
     );
 };
 
-// ---------------------------------------------------------------------------
+
 // Main UserList Component
-// ---------------------------------------------------------------------------
 const UserList = ({
     users,
     onlineUsers,
@@ -306,7 +303,7 @@ const UserList = ({
         return '';
     };
 
-    // Get preview label for group row
+
     const getGroupLastText = (group) => {
         const lastMsg = group.lastMessage;
         if (!lastMsg) return null;

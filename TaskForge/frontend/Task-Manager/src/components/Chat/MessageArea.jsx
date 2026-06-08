@@ -13,11 +13,9 @@ import TypingIndicator from './TypingIndicator';
 import { GrGroup } from 'react-icons/gr';
 
 
-/**
- * MessageArea — main chat pane.
- * Handles loading, sending messages (standard DB and secure P2P WebRTC),
- * scroll tracking, and sockets.
- */
+//@desc : MessageArea main chat pane.
+//@params : selectedUser, selectedGroup, currentUser, onOpenProfile, conversationId, onBack
+//@return : jsx
 const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, conversationId: passedConvId, onBack }) => {
     const { socket, onlineUsers, typingUsers } = useSocket();
     const { sendP2PMessage, p2pMessages, clearP2PMessages } = useWebRTC();
@@ -44,7 +42,6 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
     const isNearBottomRef = useRef(true);
     const justSwitchedConvRef = useRef(false);
 
-    //  Derived values 
     const isGroup = !!selectedGroup;
     const target = selectedGroup || selectedUser;
 
@@ -56,7 +53,7 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
     const isGroupAdmin = selectedGroup?.groupAdmins?.some((a) => (a._id || a) === currentUser?._id);
     const canSendMessage = !isGroup || selectedGroup?.messagingMode === 'everyone' || isGroupAdmin || isSystemAdmin;
 
-    // Sync passedConvId → local state when parent selects a new conversation.
+
     useEffect(() => {
         setConversationId(passedConvId || null);
     }, [passedConvId]);
@@ -81,29 +78,22 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
             setNewMessage('');
             setEditingMessage(null);
         }
-    }, [selectedUser, selectedGroup]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [selectedUser, selectedGroup]);
 
-    //  Socket event handlers 
     useEffect(() => {
         if (!socket) return;
 
-        /**
-         * Incoming 1-on-1 message from the server.
-         * Appends the message and marks it as seen immediately.
-         */
+        //Incoming 1-on-1 message from the server.
         const handleReceiveMessage = (message) => {
             const senderId = message.sender?._id || message.sender;
 
             if (isGroup && message.conversationId === conversationId) {
-                // Deduplicate — the group socket room may deliver it twice.
                 setMessages((prev) => prev.some((m) => m._id === message._id) ? prev : [...prev, message]);
                 return;
             }
 
             if (!isGroup && selectedUser && String(senderId) === String(selectedUser._id)) {
                 setMessages((prev) => prev.some((m) => m._id === message._id) ? prev : [...prev, message]);
-
-                // Mark the conversation as seen immediately.
                 if (conversationId) {
                     axiosInstance.put(`/api/chat/seen/${conversationId}`).catch(() => { });
                     socket.emit('mark_seen', { conversationId, senderId: selectedUser._id });
@@ -111,14 +101,11 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
             }
         };
 
-        /**
-         * Incoming group message broadcast.
-         */
+        // Incoming group message broadcast.
         const handleGroupMessage = (message) => {
             if (!isGroup || message.conversationId !== conversationId) return;
             setMessages((prev) => prev.some((m) => m._id === message._id) ? prev : [...prev, message]);
 
-            // Mark group messages as seen so the badge clears immediately.
             if (conversationId) {
                 axiosInstance.put(`/api/chat/seen/${conversationId}`).catch(() => { });
                 socket.emit('mark_seen', { conversationId });
@@ -237,7 +224,6 @@ const MessageArea = ({ selectedUser, selectedGroup, currentUser, onOpenProfile, 
     }, []);
 
     //  Data fetching 
-
     const fetchMessages = async () => {
         try {
             if (isGroup) {

@@ -237,7 +237,6 @@ export const WebRTCProvider = ({ children }) => {
             peer = createPeer(targetId, true);
         }
 
-        // Wait for DataChannel to be fully open
         if (!peer.connected) {
             await new Promise((resolve, reject) => {
                 const onConnect = () => { cleanup(); setTimeout(resolve, 100); };
@@ -249,7 +248,7 @@ export const WebRTCProvider = ({ children }) => {
                 };
                 peer.on('connect', onConnect);
                 peer.on('error', onErr);
-                // 45 second timeout — accounts for TURN relay + Render cold starts
+
                 const timer = setTimeout(() => {
                     cleanup();
                     reject(new Error('P2P timed out. Please try again or disable P2P mode.'));
@@ -262,7 +261,6 @@ export const WebRTCProvider = ({ children }) => {
         const timestamp = new Date().toISOString();
 
         if (file) {
-            // Convert file to base64, then send in 16KB chunks over DataChannel
             const base64 = await new Promise((res, rej) => {
                 const r = new FileReader();
                 r.onload = () => res(r.result);
@@ -283,7 +281,6 @@ export const WebRTCProvider = ({ children }) => {
                 }
             }
 
-            // Also show the file locally for the sender
             addMessage(targetId, {
                 id: msgId, senderId, timestamp,
                 file: { ...meta, data: base64 },

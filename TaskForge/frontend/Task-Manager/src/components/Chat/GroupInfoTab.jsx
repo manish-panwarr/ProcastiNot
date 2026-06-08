@@ -3,9 +3,9 @@ import { getInitials } from '../../utils/helper';
 import InfoCard from './InfoCard';
 import { getFullUrl } from './chatUtils';
 
-/**
- * Tab displaying group metadata, messaging permissions, and group management actions.
- */
+//@desc : group info tab
+//@params : group, currentUser, canManageGroup, isGroupCreator, isGroupAdmin, currentAdminCount, messagingMode, saving, handleUpdateGroup, handleToggleMessagingMode, handleDeleteGroup
+//@return : jsx
 const GroupInfoTab = ({
     group,
     currentUser,
@@ -227,14 +227,12 @@ const GroupInfoTab = ({
                         </div>
                         <div
                             onClick={!saving ? handleToggleMessagingMode : undefined}
-                            className={`w-11 h-6 rounded-full relative cursor-pointer shrink-0 transition-colors duration-300 ${
-                                messagingMode === 'everyone' ? 'bg-[#22c55e]' : 'bg-slate-400'
-                            } ${saving ? 'cursor-not-allowed opacity-50' : ''}`}
+                            className={`w-11 h-6 rounded-full relative cursor-pointer shrink-0 transition-colors duration-300 ${messagingMode === 'everyone' ? 'bg-[#22c55e]' : 'bg-slate-400'
+                                } ${saving ? 'cursor-not-allowed opacity-50' : ''}`}
                         >
                             <div
-                                className={`absolute top-[3px] w-4.5 h-4.5 rounded-full bg-white shadow-sm transition-all duration-300 ${
-                                    messagingMode === 'everyone' ? 'left-[22px]' : 'left-[3px]'
-                                }`}
+                                className={`absolute top-[3px] w-4.5 h-4.5 rounded-full bg-white shadow-sm transition-all duration-300 ${messagingMode === 'everyone' ? 'left-[22px]' : 'left-[3px]'
+                                    }`}
                             />
                         </div>
                     </div>

@@ -192,7 +192,6 @@ const ChatInterface = () => {
     const handleBackToChat = () => setActivePanel('chat');
     const handleBackToList = () => {
         setActivePanel('list');
-        // Clear the active conversation reference when going back to the list.
         if (activeConvIdRef) activeConvIdRef.current = null;
     };
 
@@ -232,7 +231,7 @@ const ChatInterface = () => {
                 />
             </div>
 
-            {/* Resizable divider — left */}
+            {/* Resizable divider  left */}
             <div
                 className="ci-resize-handle"
                 onMouseDown={() => {
@@ -246,7 +245,7 @@ const ChatInterface = () => {
                 <div className="ci-resize-dot" />
             </div>
 
-            {/* Chat / message area panel */}
+            {/* Chat  area panel */}
             <div className={`ci-panel ci-panel-chat ${activePanel === 'chat' ? 'ci-active' : ''}`}>
                 <MessageArea
                     selectedUser={selectedUser}
@@ -258,7 +257,7 @@ const ChatInterface = () => {
                 />
             </div>
 
-            {/* Resizable divider — right */}
+            {/* Resizable divider  right */}
             <div
                 className="ci-resize-handle"
                 style={{ display: isProfileVisible ? 'flex' : 'none' }}

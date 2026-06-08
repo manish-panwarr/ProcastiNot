@@ -1,8 +1,9 @@
 import React from 'react';
 
-/**
- * A reusable card component to display details like name, department, role, or meta stats.
- */
+
+//@desc : reusable card component to display details like name, department, role, or meta stats.
+//@params : icon, label, value, href, multiline
+//@return : jsx
 const InfoCard = ({ icon, label, value, href, multiline }) => (
     <div
         className={`flex gap-2.5 p-2.5 px-3 bg-slate-50 rounded-xl border border-[#e8eef8] ${multiline ? 'items-start' : 'items-center'

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { getInitials } from '../../utils/helper';
 import { getFullUrl } from './chatUtils';
 
-/**
- * Modal dialog to select and add users as new members to the current group.
- */
+
+//  Modal dialog to select and add users as new members to the current group.
+
 const AddMemberModal = ({ allUsers = [], currentParticipants = [], onClose, onAdd, loading }) => {
     const [search, setSearch] = useState('');
     const [selectedIds, setSelectedIds] = useState([]);
@@ -80,8 +80,8 @@ const AddMemberModal = ({ allUsers = [], currentParticipants = [], onClose, onAd
                                 >
                                     <div
                                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-all ${isSelected
-                                                ? 'border-[#1368EC] bg-[#1368EC]'
-                                                : 'border-slate-300 bg-white'
+                                            ? 'border-[#1368EC] bg-[#1368EC]'
+                                            : 'border-slate-300 bg-white'
                                             }`}
                                     >
                                         {isSelected && (
@@ -127,8 +127,8 @@ const AddMemberModal = ({ allUsers = [], currentParticipants = [], onClose, onAd
                         onClick={() => onAdd(selectedIds)}
                         disabled={selectedIds.length === 0 || loading}
                         className={`flex-1 py-3 border-none rounded-xl text-sm font-semibold transition-all shadow-sm ${selectedIds.length === 0 || loading
-                                ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
-                                : 'bg-gradient-to-r from-[#1368EC] to-[#2563eb] text-white cursor-pointer hover:shadow-md hover:shadow-blue-500/20'
+                            ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-[#1368EC] to-[#2563eb] text-white cursor-pointer hover:shadow-md hover:shadow-blue-500/20'
                             }`}
                     >
                         {loading

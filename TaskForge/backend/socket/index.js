@@ -20,7 +20,7 @@ module.exports = (io) => {
             socket.emit("pong_server");
         });
 
-        // --- PRESENCE SYSTEM ---
+        // PRESENCE SYSTEM 
         socket.on("register_user", (userId) => {
             const userIdStr = userId ? String(userId) : `temp_${socket.id}`;
 
@@ -30,7 +30,6 @@ module.exports = (io) => {
             }
             onlineUsers.get(userIdStr).add(socket.id);
 
-            // Attach userId to socket for easy disconnect lookup
             socket._userId = userIdStr;
 
             // Join user-specific room (enables io.to(userId) broadcasting)
@@ -57,15 +56,12 @@ module.exports = (io) => {
             }
         });
 
-        // --- 1-ON-1 CHAT ---
-        // Pure relay — the REST API (/api/chat/send) already persists the message.
-        // This handler just forwards the saved message to the recipient in real-time.
+        //  1-ON-1 CHAT 
         socket.on("send_message", (message) => {
             const { recipientId } = message;
             if (!recipientId) return;
 
             const targetRoom = String(recipientId);
-            // Deliver to ALL tabs of the recipient via room
             io.to(targetRoom).emit("receive_message", message);
             // Delivery receipt
             if (message._id) {
@@ -76,7 +72,7 @@ module.exports = (io) => {
             }
         });
 
-        // --- GROUP CHAT ---
+        //  GROUP CHAT
         socket.on("join_group", (conversationId) => {
             socket.join(`group:${conversationId}`);
         });
@@ -85,18 +81,16 @@ module.exports = (io) => {
             socket.leave(`group:${conversationId}`);
         });
 
-        // Pure relay — REST API already persists group messages.
         socket.on("send_group_message", (message) => {
             if (message.conversationId) {
                 io.to(`group:${message.conversationId}`).emit("receive_group_message", message);
             }
         });
 
-        // --- TYPING INDICATOR ---
+        //  TYPING INDICATOR
         socket.on("typing", ({ conversationId, recipientId }) => {
             const senderId = socket._userId;
             if (conversationId) {
-                // Group typing: notify others in the group room
                 socket.to(`group:${conversationId}`).emit("user_typing", { conversationId, userId: senderId });
             } else if (recipientId) {
                 // 1-on-1 typing: notify only the recipient
@@ -113,7 +107,7 @@ module.exports = (io) => {
             }
         });
 
-        // --- MESSAGE STATUS ---
+        // MESSAGE STATUS
         socket.on("mark_delivered", ({ messageId, senderId }) => {
             io.to(String(senderId)).emit("message_status_update", {
                 messageId,
@@ -125,7 +119,7 @@ module.exports = (io) => {
             io.to(String(senderId)).emit("messages_seen", { conversationId });
         });
 
-        // --- MESSAGE DELETION NOTIFICATIONS ---
+        //  MESSAGE DELETION NOTIFICATIONS
         socket.on("message_deleted_event", ({ conversationId, messageId, type, recipientId }) => {
             io.to(String(recipientId)).emit("message_deleted", { conversationId, messageId, type });
         });
@@ -134,8 +128,7 @@ module.exports = (io) => {
             io.to(String(recipientId)).emit("chat_cleared", { conversationId });
         });
 
-        // --- P2P WEBRTC SIGNALING ---
-        // Route WebRTC signals between peers via user rooms
+        //  P2P WEBRTC SIGNALING 
         socket.on("p2p_signal", (data) => {
             const { to, signal, from } = data;
             const toStr = String(to);
@@ -151,7 +144,7 @@ module.exports = (io) => {
             }
         });
 
-        // --- P2P AUTHORIZATION FLOW ---
+        //  P2P AUTHORIZATION FLOW 
         socket.on("request_p2p", ({ recipientId, senderId, senderName }) => {
             io.to(String(recipientId)).emit("p2p_request", { senderId, senderName });
         });
@@ -168,7 +161,7 @@ module.exports = (io) => {
             io.to(String(recipientId)).emit("p2p_cancelled");
         });
 
-        // --- LEGACY FILE TRANSFER SIGNALING (kept for backward compat) ---
+        //  LEGACY FILE TRANSFER SIGNALING 
         socket.on("file_transfer_offer", ({ recipientId, offer, fileName, fileSize, fileType, transferId }) => {
             const senderId = socket._userId;
             io.to(String(recipientId)).emit("file_transfer_offer", {

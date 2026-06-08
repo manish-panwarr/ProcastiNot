@@ -1,15 +1,6 @@
 import React from 'react';
 
-/**
- * Renders delivery/seen status tick icons for the current user's outgoing messages.
- * Returns null for messages sent by others.
- *
- * Statuses:
- *   'sending'   → animated spinner
- *   'seen'      → double blue ticks
- *   'delivered' → double grey ticks
- *   (default)   → single grey tick (sent)
- */
+
 const MessageTicks = ({ status, isMe }) => {
     if (!isMe) return null;
 

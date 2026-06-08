@@ -1,23 +1,11 @@
-/**
- * @file controllers/reportController.js
- * @desc Production-grade report controller.
- *       exportUsersReport: replaced full-collection fetch + in-memory join
- *       with a single MongoDB aggregation pipeline.
- *       exportTasksReport: added .lean() and streaming response.
- */
-
 const Task = require("../models/Task");
 const User = require("../models/User");
 const excelJS = require("exceljs");
 
-// ─────────────────────────────────────────────
 //  exportTasksReport
 //  GET /api/reports/export/tasks
-//  Added: .lean() for memory efficiency
-// ─────────────────────────────────────────────
 const exportTasksReport = async (req, res) => {
     try {
-        // .lean() returns plain JS objects — much faster and memory-efficient for large datasets
         const tasks = await Task.find()
             .populate("assignedTo", "name email")
             .lean();
@@ -65,26 +53,12 @@ const exportTasksReport = async (req, res) => {
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  exportUsersReport
 //  GET /api/reports/export/users
-//  BEFORE: User.find() + Task.find() (2 full-collection scans) + in-memory join
-//  AFTER:  Single aggregation pipeline — MongoDB does the join server-side
-// ─────────────────────────────────────────────
 const exportUsersReport = async (req, res) => {
     try {
-        /**
-         * Single aggregation pipeline:
-         * 1. Start from User collection
-         * 2. $lookup tasks assigned to each user (no populate overhead)
-         * 3. $group task counts by status for each user
-         * 4. $project final shape
-         *
-         * This replaces: User.find() + Task.find() + JavaScript loop join
-         * Performance: O(1) DB round-trips instead of O(2) + in-memory O(U*T)
-         */
         const userStats = await User.aggregate([
-            // Don't include sensitive fields
             { $project: { password: 0, __v: 0 } },
             {
                 // Lookup all tasks where this user is in assignedTo array
@@ -112,7 +86,6 @@ const exportUsersReport = async (req, res) => {
                     as: "taskData"
                 }
             },
-            // Flatten the nested taskData array
             {
                 $addFields: {
                     taskStats: { $ifNull: [{ $arrayElemAt: ["$taskData", 0] }, { totalTasks: 0, pendingTasks: 0, inProgressTasks: 0, completedTasks: 0 }] }

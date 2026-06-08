@@ -1,9 +1,7 @@
 import React from 'react';
 
-/**
- *@desc: Modal confirmation dialog with a backdrop overlay.
- *@desc Clicking the backdrop calls onCancel.
- */
+//@desc : Modal confirmation dialog with a backdrop overlay.
+
 const ConfirmDialog = ({
     title = 'Are you sure?',
     body,
@@ -37,8 +35,8 @@ const ConfirmDialog = ({
                     <button
                         onClick={onConfirm}
                         className={`px-5 py-2.5 rounded-xl border-none text-white font-semibold text-sm cursor-pointer transition-all hover:shadow-md ${isDanger
-                                ? 'bg-red-500 hover:bg-red-600 shadow-red-500/10'
-                                : 'bg-[#1368EC] hover:bg-[#0f52c4] shadow-blue-500/10'
+                            ? 'bg-red-500 hover:bg-red-600 shadow-red-500/10'
+                            : 'bg-[#1368EC] hover:bg-[#0f52c4] shadow-blue-500/10'
                             }`}
                     >
                         {confirmText}

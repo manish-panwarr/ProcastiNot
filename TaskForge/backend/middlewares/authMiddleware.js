@@ -1,25 +1,15 @@
-/**
- * @file middlewares/authMiddleware.js
- * @desc Production-grade auth middleware with:
- *   1. Redis-backed user cache (avoids a DB hit on every request)
- *   2. JWT blacklist check (supports real logout)
- *   3. Role-based access control helpers
- */
-
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { getCache, setCache, existsCache } = require("../config/redis");
 
-// ─────────────────────────────────────────────
+
 //  protect
 //  Validates JWT access token, checks blacklist, caches user.
-// ─────────────────────────────────────────────
 
 const protect = async (req, res, next) => {
     try {
         let token;
 
-        // Support both Authorization header and httpOnly cookie
         if (req.headers.authorization && req.headers.authorization.startsWith("Bearer ")) {
             token = req.headers.authorization.split(" ")[1];
         } else if (req.cookies && req.cookies.accessToken) {
@@ -68,16 +58,13 @@ const protect = async (req, res, next) => {
         next();
     } catch (error) {
         console.error("[Auth Middleware] Error:", error.message);
-        // Don't leak internal error details
         res.status(401).json({ success: false, message: "Not authorized" });
     }
 };
 
-// ─────────────────────────────────────────────
+
 //  adminOnly
 //  Requires admin or manager role
-// ─────────────────────────────────────────────
-
 const adminOnly = (req, res, next) => {
     if (req.user && (req.user.role === "admin" || req.user.role === "manager")) {
         return next();
@@ -85,11 +72,8 @@ const adminOnly = (req, res, next) => {
     res.status(403).json({ success: false, message: "Access denied. Admin or Manager role required." });
 };
 
-// ─────────────────────────────────────────────
 //  managerOnly
 //  Requires manager role specifically
-// ─────────────────────────────────────────────
-
 const managerOnly = (req, res, next) => {
     if (req.user && req.user.role === "manager") {
         return next();

@@ -1,7 +1,6 @@
 import React from 'react';
 import { getFullUrl, getFileCategory, FILE_META } from './chatUtils';
 
-/** Renders a file icon representing the file type category. */
 const FileTypeIcon = ({ category }) => {
     switch (category) {
         case 'pdf':
@@ -74,9 +73,8 @@ const FileTypeIcon = ({ category }) => {
     }
 };
 
-/**
- * Tab displaying a grid gallery of all media/documents shared in the active conversation.
- */
+//@desc : tab displaying a grid gallery of all media/documents shared in the active conversation.
+//@params : 
 const SharedFilesTab = ({ loadingFiles, validSharedFiles = [], setPreviewFile }) => {
     return (
         <div className="p-3.5 px-4 font-sans">

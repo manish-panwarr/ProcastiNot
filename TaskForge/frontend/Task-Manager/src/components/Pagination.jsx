@@ -10,35 +10,31 @@ const Pagination = ({
 }) => {
     if (totalResults === 0 || totalPages < 1) return null;
 
-    // Helper to generate page range with ellipsis (e.g., 1 2 3 4 5 ... 99)
+    // Helper to generate page range with ellipsis 
     const getPageNumbers = () => {
         const pages = [];
-        const showMax = 5; // number of pages to show before/after ellipsis
+        const showMax = 5;
 
         if (totalPages <= 7) {
             for (let i = 1; i <= totalPages; i++) {
                 pages.push(i);
             }
         } else {
-            // Always show first page
             pages.push(1);
 
             if (currentPage <= 4) {
-                // Near the start
                 for (let i = 2; i <= 5; i++) {
                     pages.push(i);
                 }
                 pages.push("...");
                 pages.push(totalPages);
             } else if (currentPage >= totalPages - 3) {
-                // Near the end
                 pages.push("...");
                 for (let i = totalPages - 4; i <= totalPages - 1; i++) {
                     pages.push(i);
                 }
                 pages.push(totalPages);
             } else {
-                // In the middle
                 pages.push("...");
                 pages.push(currentPage - 1);
                 pages.push(currentPage);
@@ -55,7 +51,6 @@ const Pagination = ({
 
     return (
         <div className="fixed bottom-2 left-4 right-14 lg:left-64 xl:left-88 z-50 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-xl border border-black bg-white/70 backdrop-blur-2xl px-5 py-2 shadow-[0_8px_40px_rgba(0,0,0,0.12)] transition-all duration-300">
-            {/* Left and Center: Navigation Controls */}
             <div className="flex items-center gap-6">
                 {/* Previous Button */}
                 <button

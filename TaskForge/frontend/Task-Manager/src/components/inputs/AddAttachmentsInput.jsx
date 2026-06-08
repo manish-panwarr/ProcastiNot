@@ -20,7 +20,7 @@ const AddAttachmentsInput = ({ attachments, setAttachments, files, setFiles }) =
         setAttachments(updatedArr);
     };
 
-    // Function to handle deleting a file (new upload)
+    // Function to handle deleting a file
     const handleDeleteFile = (index) => {
         const updatedFiles = files.filter((_, i) => i !== index);
         setFiles(updatedFiles);
