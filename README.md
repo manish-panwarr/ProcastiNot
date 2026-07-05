@@ -10,7 +10,6 @@ TaskForge is a production-grade collaboration platform built to support modern t
 Unlike traditional task managers, TaskForge includes a serverless WebRTC-based peer-to-peer file sharing system that enables direct browser-to-browser transfers without routing files through application servers.
 
 LIVE : https://task-forge-three-chi.vercel.app
-LIVE Demo : https://task-forge-three-chi.vercel.app
 <img width="1918" height="923" alt="Screenshot 2026-06-08 095442" src="https://github.com/user-attachments/assets/75b63074-376e-4c33-96df-e2497ae59083" />
 <img width="1918" height="922" alt="Screenshot 2026-06-08 095507" src="https://github.com/user-attachments/assets/03c3a6fb-e386-43e5-9e6e-bc35b2e772a0" />
 <img width="1918" height="921" alt="Screenshot 2026-06-08 095541" src="https://github.com/user-attachments/assets/63246b5f-80cd-40c6-aee0-031847a0e1c9" />
