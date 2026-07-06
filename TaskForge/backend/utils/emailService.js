@@ -1,30 +1,7 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-
-//@desc: Transporter created once, reused for all emails.
-//Falls back gracefully if env vars are missing.
-
-let transporter = null;
-
-function getTransporter() {
-    if (transporter) return transporter;
-
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.warn("[Email] EMAIL_USER or EMAIL_PASS not set — email notifications disabled.");
-        return null;
-    }
-
-    transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-            user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
-        },
-    });
-
-    return transporter;
-}
-
+//@desc: Email transport via official Resend Node.js SDK.
+//No SMTP ports required — fully cloud-compatible.
 
 //  BASE TEMPLATE
 //  Shared HTML wrapper for all emails.
@@ -318,15 +295,34 @@ function ctaButton(label, url, color = "#6C63FF") {
 }
 
 
-//  CORE SEND FUNCTION
+//  CORE SEND FUNCTION  (Resend SDK)
 async function sendEmail({ to, subject, html }) {
-    const t = getTransporter();
-    if (!t) return; // Email disabled — silently skip
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+        console.warn("[Email] RESEND_API_KEY not set — email notifications disabled.");
+        return;
+    }
 
-    const from = process.env.EMAIL_FROM || `"TaskForge" <${process.env.EMAIL_USER}>`;
+    const resend = new Resend(apiKey);
+    const from = process.env.EMAIL_FROM || "TaskForge <noreply@mmsingh.me>";
 
-    await t.sendMail({ from, to, subject, html });
-    console.log(`[Email] Sent "${subject}" → ${to}`);
+    try {
+        const response = await resend.emails.send({
+            from,
+            to,
+            subject,
+            html,
+        });
+
+        if (response.error) {
+            console.error(`[Email] Resend API error sending to ${to}:`, response.error);
+            return;
+        }
+
+        console.log(`[Email] Sent "${subject}" → ${to} (id: ${response.data?.id})`);
+    } catch (err) {
+        console.error(`[Email] Request failed to ${to}:`, err.message);
+    }
 }
 
 //  TASK ASSIGNED EMAIL
