@@ -274,6 +274,7 @@ const createTask = async (req, res) => {
             : [];
         const userMap = Object.fromEntries(assignedUsers.map(u => [u._id.toString(), u]));
 
+        const emailPromises = [];
         for (const userId of assignedTo) {
             const objId = mongoose.Types.ObjectId.isValid(userId) ? userId : null;
             if (objId) {
@@ -293,14 +294,20 @@ const createTask = async (req, res) => {
                     });
                 }
 
-                // Email notification — fire-and-forget
+                // Email notification
                 const assignedUser = userMap[objId.toString()];
                 if (assignedUser?.email) {
-                    sendTaskAssignedEmail(assignedUser, task).catch(err =>
-                        console.error("[Email] sendTaskAssignedEmail failed:", err.message)
+                    emailPromises.push(
+                        sendTaskAssignedEmail(assignedUser, task).catch(err =>
+                            console.error("[Email] sendTaskAssignedEmail failed:", err.message)
+                        )
                     );
                 }
             }
+        }
+
+        if (emailPromises.length > 0) {
+            await Promise.allSettled(emailPromises);
         }
 
         invalidateTaskCaches(creatorId).catch(err => console.error("Cache invalidation failed:", err.message));
@@ -397,9 +404,11 @@ const updateTask = async (req, res) => {
             .populate("assignedTo", "name email profileImageUrl")
             .lean();
 
-        // In-app + email notifications — fire-and-forget
+        // In-app + email notifications
         const Notification = require("../models/Notification");
         const ioSocket = req.app.get("io");
+        const emailPromises = [];
+
         for (const user of updatedTask.assignedTo) {
             // In-app notification
             const notify = new Notification({
@@ -417,12 +426,18 @@ const updateTask = async (req, res) => {
                 });
             }
 
-            // Email notification — fire-and-forget
+            // Email notification
             if (user.email) {
-                sendTaskUpdatedEmail(user, updatedTask).catch(err =>
-                    console.error("[Email] sendTaskUpdatedEmail failed:", err.message)
+                emailPromises.push(
+                    sendTaskUpdatedEmail(user, updatedTask).catch(err =>
+                        console.error("[Email] sendTaskUpdatedEmail failed:", err.message)
+                    )
                 );
             }
+        }
+
+        if (emailPromises.length > 0) {
+            await Promise.allSettled(emailPromises);
         }
 
         invalidateTaskCaches(userId).catch(err => console.error("Cache invalidation failed:", err.message));

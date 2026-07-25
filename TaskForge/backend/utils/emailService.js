@@ -135,7 +135,9 @@ function ctaButton(label, url, color = "#6C63FF") {
 async function sendEmail({ to, subject, html }) {
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
-        return;
+        const errMsg = `[Email] Cannot send email: RESEND_API_KEY is not defined in process.env. Check production environment variables.`;
+        console.error(errMsg);
+        throw new Error(errMsg);
     }
 
     const resend = new Resend(apiKey);
@@ -150,13 +152,15 @@ async function sendEmail({ to, subject, html }) {
         });
 
         if (response.error) {
-            console.error(`[Email] Error sending to ${to}:`, response.error);
-            return;
+            const errMsg = response.error.message || JSON.stringify(response.error);
+            console.error(`[Email] Resend API Error sending to ${to}:`, errMsg);
+            throw new Error(`Resend API Error: ${errMsg}`);
         }
 
-        console.log(`[Email] Sent "${subject}" -> ${to}`);
+        console.log(`[Email] Successfully sent "${subject}" -> ${to}`);
     } catch (err) {
-        console.error(`[Email] Request failed to ${to}:`, err.message);
+        console.error(`[Email] Connection/Request failed to ${to}:`, err.message);
+        throw err;
     }
 }
 
